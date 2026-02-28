@@ -24,7 +24,8 @@ function _tpTruncate(s, n) {
 
 /* ================================================================
    "Ball in court" — après cet événement, qui doit agir ?
-   Retourne la clé acteur dont la ligne verticale sera rouge, ou null
+   Retourne la clé acteur dont la ligne verticale sera colorée, ou null.
+   Couleur du segment : orange si review, ambre/or si final_review, bleu si demandeur, rouge sinon.
 ================================================================ */
 function _tpBallInCourt(entry) {
   const etype = entry.etype || '';
@@ -37,7 +38,7 @@ function _tpBallInCourt(entry) {
     case 'demande_info':
     case 'question':        // ← alias
       if (actor === 'demandeur') return 'team';
-      return 'demandeur';  // team ou lead → demandeur
+      return 'demandeur';  // team → demandeur
 
     case 'reponse_info':
     case 'reponse':         // ← alias
@@ -46,12 +47,10 @@ function _tpBallInCourt(entry) {
     case 'complement':      return 'team';
 
     case 'commentaire':
-      if (actor === 'demandeur') return 'team';
       return 'team';
 
-    case 'escalade':
-      if (actor === 'team') return 'lead';
-      return null;  // lead escalade → hors scope (chef supprimé)
+    case 'escalade':        return 'team';  // review en cours → segment orange
+    case 'final_review':    return 'team';  // final review en cours → segment ambre
 
     case 'validation':      return null;
     case 'refus':           return null;
@@ -135,6 +134,7 @@ function tpRenderTimeline(entries) {
     }
     ballSegments.push({
       actor: targetActor,
+      etype: sorted[i].etype || '',   // pour déterminer la couleur
       x: actorX[targetActor],
       yStart: yStart + dotR + 2,
       yEnd: yEnd - dotR - 2
@@ -164,13 +164,6 @@ function tpRenderTimeline(entries) {
 
   actorKeys.forEach(k => {
     const a = ACTORS[k];
-    svg += `<marker id="tl-arr-${k}" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">` +
-      `<path d="M1.5,1.5 L9,5 L1.5,8.5" fill="none" stroke="${a.color}" stroke-width="1.8"` +
-      ` stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/></marker>`;
-  });
-
-  actorKeys.forEach(k => {
-    const a = ACTORS[k];
     svg += `<linearGradient id="tl-guide-${k}" x1="0" y1="0" x2="0" y2="1">` +
            `<stop offset="0%" stop-color="${a.color}" stop-opacity="0.02"/>` +
            `<stop offset="50%" stop-color="${a.color}" stop-opacity="0.08"/>` +
@@ -196,14 +189,24 @@ function tpRenderTimeline(entries) {
            ` stroke="url(#tl-guide-${k})" stroke-width="1"/>`;
   });
 
-  /* ── SEGMENTS "ball in court" — rouge (interne) ou orange (demandeur) ── */
+  /* ── SEGMENTS "ball in court" ──────────────────────────────────────────
+     ambre   #F1C40F : final review (etype final_review)
+     orange  #f59e42 : review (etype escalade)
+     bleu    #42a5f5 : en attente du demandeur (acteur externe)
+     rouge   #e53935 : équipe dérog doit agir (interne)
+  ─────────────────────────────────────────────────────────────────────── */
   ballSegments.forEach(seg => {
     const x = seg.x;
     if (seg.yEnd <= seg.yStart) return;
 
-    const isExternal = seg.actor === 'demandeur';
-    const segColor   = isExternal ? '#f59e42' : '#e53935';
-    const segClass   = 'tl-ball-segment ' + (isExternal ? 'tl-ball-external' : 'tl-ball-internal');
+    const isFinalReview = seg.etype === 'final_review';
+    const isReview      = seg.etype === 'escalade';
+    const isExternal    = seg.actor === 'demandeur';
+    const segColor      = isFinalReview ? '#F1C40F'
+                        : isReview      ? '#f59e42'
+                        : isExternal    ? '#42a5f5'
+                        :                 '#e53935';
+    const segClass      = 'tl-ball-segment ' + ((isFinalReview || isReview || isExternal) ? 'tl-ball-external' : 'tl-ball-internal');
 
     svg += `<rect x="${x - 5}" y="${seg.yStart}" width="10" height="${seg.yEnd - seg.yStart}"` +
            ` rx="5" fill="${segColor}" opacity="0.15" class="${segClass}"/>`;
@@ -238,13 +241,13 @@ function tpRenderTimeline(entries) {
     if (x1 === x2) {
       svg += `<line x1="${x1}" y1="${y1 + 8}" x2="${x2}" y2="${yArr}"` +
             ` stroke="${srcColor}" stroke-width="1.5" opacity="0.35"` +
-            ` stroke-dasharray="4,3" marker-end="url(#tl-arr-${a2})"` +
+            ` stroke-dasharray="4,3"` +
             ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
     } else {
       // Bezier cubique : départ horizontal depuis x1, arrivée horizontale sur x2
       svg += `<path d="M${x1},${y1 + 8} C${x1},${cpY} ${x2},${cpY} ${x2},${yArr}"` +
             ` fill="none" stroke="${srcColor}" stroke-width="1.5" opacity="0.35"` +
-            ` stroke-dasharray="4,3" marker-end="url(#tl-arr-${a2})"` +
+            ` stroke-dasharray="4,3"` +
             ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
     }
   }

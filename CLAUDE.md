@@ -148,13 +148,14 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 ### ACTORS (journal d'actions — ticket.html uniquement)
 | Clé | Libellé | Emoji | Couleur |
 |-----|---------|-------|---------|
-| `demandeur` | Demandeur | 👤 | `#f59e42` |
-| `team` | Team Dérog | 🛡 | `#42a5f5` |
-| `lead` | Dérog +1 | 🔍 | `#ab47bc` |
+| `demandeur` | Demandeur | 👤 | `#42a5f5` (bleu) |
+| `team` | Team Dérog | 🛡 | `#4caf50` (vert) |
 
 ### ETYPES (types d'événements journal — ticket.html uniquement)
-9 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` 🚀 · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
+10 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` ⚖️ (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
 Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (clé STATUSES ou null).
+⚠️ L'etype `escalade` conserve son `id: 'escalade'` pour la compat des données existantes ; son label est "Review" et son emoji ⭐.
+`final_review` : `triggersStatus: null`, couleur `#F1C40F` (ambre/or) — déclenche un segment ambre dans la timeline jusqu'au prochain changement d'état.
 
 ### STATUSES (workflow interne dérogation — ticket.html uniquement)
 8 états : `brouillon` · `soumis` · `en_attente` · `analyse` · `valide` · `escalade` · `accepte` · `refuse`
@@ -358,7 +359,7 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `tpShowToast(msg)` — toast 2.5s en bas de page
 
 ### Fonctions dans ticket-timeline.js
-- `tpRenderTimeline(entries)` — cible `#tp-timeline-wrap` ; SVG 3 colonnes (120px/col) × acteur, points bezier ; flèches bezier cubique (couleur acteur source, marqueur chevron ouvert, endpoint = `y2-dotR-2`) ; ball-in-court rouge `#e53935` (team/lead) ou orange `#f59e42` (demandeur) ; sous-statuts ❌/⏳ supprimés du SVG et du tooltip ; attache tooltip aux `.tl-dot`
+- `tpRenderTimeline(entries)` — cible `#tp-timeline-wrap` ; SVG 2 colonnes (120px/col) × acteur, points bezier ; flèches bezier cubique (couleur acteur source, marqueur chevron ouvert, endpoint = `y2-dotR-2`) ; ball-in-court : ambre `#F1C40F` si etype `final_review` (Final Review), orange `#f59e42` si etype `escalade` (Review), bleu `#42a5f5` si ball sur demandeur, rouge `#e53935` si ball sur team ; sous-statuts ❌/⏳ supprimés du SVG et du tooltip ; attache tooltip aux `.tl-dot`
 - `tpShowTip(e, entry)` / `tpMoveTip(e)` / `tpHideTip()` — tooltip fixe ciblant `#tp-tooltip`
 - `_tpFormatDateShort(d)` — helper date courte (`"2025-03-15"` → `"15 mar"`)
 
