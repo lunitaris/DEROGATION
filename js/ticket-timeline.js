@@ -81,14 +81,15 @@ function tpRenderTimeline(entries) {
   /* ── Layout ── */
   const actorKeys = Object.keys(ACTORS);
   const colW      = 120;
-  const totalW    = actorKeys.length * colW;
+  const padLeft   = 130;   // espace pour les labels de la colonne gauche (demandeur)
+  const totalW    = padLeft + actorKeys.length * colW;
   const padTop    = 30;
   const spacingY  = 56;
   const dotR      = 7;
 
   const actorX = {};
   actorKeys.forEach((k, i) => {
-    actorX[k] = Math.round(i * colW + colW / 2);
+    actorX[k] = padLeft + Math.round(i * colW + colW / 2);
   });
 
   const yPositions = [];
@@ -143,6 +144,8 @@ function tpRenderTimeline(entries) {
 
   /* ── Header ── */
   let headerHtml = '<div class="tl-header">';
+  // Spacer gauche aligné sur padLeft pour les labels du demandeur
+  headerHtml += `<div style="flex-basis:${padLeft}px;flex-shrink:0;"></div>`;
   actorKeys.forEach(k => {
     const a = ACTORS[k];
     headerHtml += `<div class="tl-col-head" style="color:${a.color};flex-basis:${colW}px;flex-shrink:0;">` +
@@ -209,9 +212,9 @@ function tpRenderTimeline(entries) {
     const segClass      = 'tl-ball-segment ' + ((isFinalReview || isReview || isExternal) ? 'tl-ball-external' : 'tl-ball-internal');
 
     svg += `<rect x="${x - 5}" y="${seg.yStart}" width="10" height="${seg.yEnd - seg.yStart}"` +
-           ` rx="5" fill="${segColor}" opacity="0.15" class="${segClass}"/>`;
+           ` rx="5" fill="${segColor}" opacity="0.08" class="${segClass}"/>`;
     svg += `<line x1="${x}" y1="${seg.yStart}" x2="${x}" y2="${seg.yEnd}"` +
-           ` stroke="${segColor}" stroke-width="2.5" opacity="0.45"` +
+           ` stroke="${segColor}" stroke-width="2.5" opacity="0.30"` +
            ` stroke-linecap="round" class="${segClass}"/>`;
   });
 
@@ -285,7 +288,9 @@ function tpRenderTimeline(entries) {
            `${et.emoji || '?'}</text>`;
 
     /* ── Labels ── */
-    const isRight = ci <= 1;
+    // Première colonne (demandeur) → labels vers la gauche dans padLeft
+    // Autres colonnes → labels vers la droite
+    const isRight = ci > 0;
     const labelX  = isRight ? cx + dotR + 10 : cx - dotR - 10;
     const anchor  = isRight ? 'start' : 'end';
 
