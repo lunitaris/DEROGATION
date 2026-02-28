@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DerogManager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/views.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="topbar-brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span>DerogManager</span>
+  </div>
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" placeholder="Chercher ticket, titre, porteur…" autocomplete="off">
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-primary" onclick="openNewModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nouvelle dérogation
+    </button>
+    <button class="btn-icon" onclick="exportData()" title="Exporter les données JSON">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
+    <button class="btn-icon" onclick="triggerImport()" title="Importer un fichier JSON (remplace toutes les données)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </button>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(this)">
+    <button class="btn-icon" onclick="toggleTheme()" title="Basculer thème clair/sombre">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <button class="btn-icon" onclick="toggleShortcutsBar()" title="Raccourcis clavier (afficher/masquer)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+    </button>
+  </div>
+</header>
+
+<div id="app-body">
+  <div id="main-content">
+    <!-- BANNER DONNÉES CORROMPUES — affiché si Store._loadError est défini -->
+    <div id="data-error-banner" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span class="data-error-msg">Données localStorage corrompues — les dérogations ne peuvent pas être lues.</span>
+      <button onclick="showDataError()">Voir le détail</button>
+    </div>
+
+    <div id="today-panel">
+      <div class="today-header" onclick="toggleTodayPanel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--urgency-p0)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="today-title" id="today-title-text">À traiter aujourd'hui <span class="today-count" id="today-count">0</span></span>
+        <svg class="chevron open" id="today-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="today-body" id="today-body"></div>
+    </div>
+
+    <div id="stats-bar"></div>
+
+    <div id="filter-bar">
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">Tous statuts SN</option>
+        <option value="new">New</option>
+        <option value="en_revue">En revue</option>
+        <option value="validated">Validé</option>
+        <option value="expired">Expiré</option>
+      </select>
+      <select id="filter-action" onchange="applyFilters()">
+        <option value="">Toutes next steps</option>
+        <option value="a_faire">À faire par moi</option>
+        <option value="attente_demandeur">Attente demandeur</option>
+        <option value="reunion_prevue">Réunion prévue</option>
+        <option value="suivi_date">Suivi à date</option>
+        <option value="attente_validation">Attente validation</option>
+        <option value="termine">Terminé</option>
+      </select>
+      <select id="filter-expiry" onchange="applyFilters()">
+        <option value="">Toutes expirations</option>
+        <option value="week">Expire cette semaine</option>
+        <option value="month">Expire ce mois</option>
+        <option value="past">Déjà expirées</option>
+      </select>
+      <div class="filter-sep"></div>
+      <select id="sort-select" onchange="applyFilters()">
+        <option value="updatedAt">Mis à jour</option>
+        <option value="expiresAt">Expiration</option>
+        <option value="createdAt">Création</option>
+        <option value="ticketId">Ticket ID</option>
+      </select>
+      <div class="filter-sep"></div>
+      <div class="view-toggle">
+        <button id="btn-card-view" class="active" onclick="setView('card')" title="Cartes">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <button id="btn-pilotage-view" onclick="setView('pilotage')" title="Vue Pilotage" style="padding:6px 10px;font-size:11px;font-weight:700;letter-spacing:.03em;">
+          ⚡ Pilotage
+        </button>
+      </div>
+      <button class="filter-clear" onclick="clearFilters()">✕ Réinitialiser</button>
+    </div>
+
+    <div id="list-container"></div>
+  </div>
+</div>
+
+<!-- SHORTCUTS BAR -->
+<div id="shortcuts-bar" class="shortcuts-bar hidden">
+  <span>Raccourcis :</span>
+  <span><kbd class="kbd-hint">N</kbd> Nouvelle dérogation</span>
+  <span><kbd class="kbd-hint">/</kbd> Recherche</span>
+  <span><kbd class="kbd-hint">J</kbd> / <kbd class="kbd-hint">K</kbd> Navigation sidebar</span>
+  <span><kbd class="kbd-hint">Esc</kbd> Fermer</span>
+</div>
+
+<aside id="detail-sidebar">
+  <div class="sidebar-topbar">
+    <div class="sidebar-nav">
+      <button id="btn-prev" onclick="navigateSidebar(-1)">‹ Préc</button>
+      <button id="btn-next" onclick="navigateSidebar(1)">Suiv ›</button>
+    </div>
+    <button class="btn-ghost" onclick="openEditModal(activeSidebarId)" style="font-size:12px;padding:5px 10px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Modifier
+    </button>
+    <button class="btn-close" onclick="closeSidebar()">×</button>
+  </div>
+  <div id="sidebar-body"></div>
+</aside>
+
+<!-- DEROGATION MODAL -->
+<div class="modal-overlay" id="derog-modal" onclick="closeModalOnOverlay(event,'derog-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Nouvelle dérogation</h2>
+      <button class="btn-close" onclick="closeModal('derog-modal')">×</button>
+    </div>
+    <div class="modal-body" id="modal-form-body"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('derog-modal')">Annuler</button>
+      <button class="btn-save" onclick="saveDerogation()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL MODAL -->
+<div class="modal-overlay" id="email-modal" onclick="closeModalOnOverlay(event,'email-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Modèle d'email</h2>
+      <button class="btn-close" onclick="closeModal('email-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="email-tabs" id="email-tabs"></div>
+      <div class="email-subject" id="email-subject-label"></div>
+      <textarea id="email-textarea"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('email-modal')">Fermer</button>
+      <button class="btn-save" onclick="copyEmail()">Copier</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal" onclick="closeModalOnOverlay(event,'confirm-modal')">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h2 id="confirm-title-el">Confirmer</h2>
+      <button class="btn-close" onclick="closeModal('confirm-modal')">×</button>
+    </div>
+    <div class="confirm-body">
+      <p class="confirm-desc" id="confirm-desc-el"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('confirm-modal')">Annuler</button>
+      <button class="btn-danger" id="confirm-ok-btn">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOT DE PASSE MAÎTRE (chiffrement) — ne pas supprimer, obligatoire au démarrage -->
+<div id="modal-crypto" class="hidden">
+  <div class="crypto-box"><!-- contenu injecté par modal-crypto.js --></div>
+</div>
+
+<script src="js/sjcl.min.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/constants.js"></script>
+<script src="js/store.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/render-shared.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/pilotage.js"></script>
+<script src="js/modal-derog.js"></script>
+<script src="js/modal-email.js"></script>
+<script src="js/modal-crypto.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

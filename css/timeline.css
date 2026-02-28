@@ -1,0 +1,383 @@
+/* ================================================================
+   TIMELINE.CSS  v3.1 — Journal enrichi + Timeline visuelle SVG
+   Utilisé uniquement par ticket.html
+   Variables CSS : utilise exclusivement celles définies dans base.css
+================================================================ */
+
+/* ── Formulaire d'ajout ── */
+.tp-j-addform {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  margin-bottom: 8px;
+}
+
+.tp-j-addform-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  flex-wrap: nowrap;
+}
+
+.tp-j-addform select,
+.tp-j-addform input[type="date"] {
+  width: auto;
+  flex: 0 0 auto;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: none;
+  transition: border-color var(--transition);
+}
+
+.tp-j-addform select:focus,
+.tp-j-addform input[type="date"]:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+#tp-j-actor  { max-width: 130px; }
+#tp-j-etype  { max-width: 148px; }
+#tp-j-date   { max-width: 130px; }
+
+.tp-j-message {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+  overflow-y: hidden;
+  outline: none;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+
+.tp-j-message:focus {
+  border-color: var(--accent);
+}
+
+.tp-j-add-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity var(--transition);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tp-j-add-btn:hover {
+  opacity: 0.82;
+}
+
+/* ── Lignes du journal enrichi ── */
+.tp-jrow {
+  margin-bottom: 3px;
+  padding: 4px 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+}
+
+.tp-jrow-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.tp-jrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.tp-j-actor-sel,
+.tp-j-etype-sel {
+  width: auto;
+  flex: 0 0 auto;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 2px 4px;
+  font-size: 10px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color var(--transition);
+  max-width: 120px;
+}
+
+.tp-j-actor-sel:focus,
+.tp-j-etype-sel:focus {
+  border-color: var(--accent);
+}
+
+.tp-jrow .action-log-date {
+  padding: 2px 5px;
+  font-size: 11px;
+}
+
+.tp-jrow .action-log-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+/* ================================================================
+   LAYOUT DOSSIER + TIMELINE
+================================================================ */
+#tp-dossier-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+#tp-dossier-row > #tp-dossier {
+  flex: 1;
+  min-width: 0;
+}
+
+#tp-dossier-row > #tp-timeline {
+  flex: 0 0 340px;
+  position: sticky;
+  top: 0;
+}
+
+@media (max-width: 1000px) {
+  #tp-dossier-row {
+    flex-direction: column;
+  }
+  #tp-dossier-row > #tp-timeline {
+    flex: none;
+    width: 100%;
+    position: static;
+  }
+}
+
+/* ================================================================
+   TIMELINE SVG — v3.1
+================================================================ */
+#tp-timeline-wrap {
+  overflow-x: auto;
+}
+
+/* ── Animation cascade ── */
+.tl-point-group {
+  opacity: 0;
+  animation: tl-fade-in 0.4s ease forwards;
+  animation-delay: var(--tl-delay, 0ms);
+}
+
+@keyframes tl-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Flèches ── */
+.tl-arrow {
+  stroke-dashoffset: 40;
+  animation: tl-dash 0.6s ease forwards;
+  animation-delay: var(--tl-delay, 0ms);
+}
+
+@keyframes tl-dash {
+  from { stroke-dashoffset: 40; opacity: 0; }
+  to   { stroke-dashoffset: 0;  opacity: 0.55; }
+}
+
+/* ── Points ── */
+.tl-dot {
+  transition: r 0.2s ease, opacity 0.2s ease;
+}
+
+.tl-dot:hover {
+  r: 9;
+  opacity: 1 !important;
+}
+
+.tl-dot:hover ~ .tl-halo {
+  opacity: 0.15;
+}
+
+/* ── Segments "ball in court" ── */
+.tl-ball-internal {
+  animation: tl-ball-pulse 2.5s ease-in-out infinite;
+}
+
+.tl-ball-external {
+  animation: tl-ball-pulse-ext 3.5s ease-in-out infinite;
+}
+
+@keyframes tl-ball-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.5; }
+}
+
+@keyframes tl-ball-pulse-ext {
+  0%, 100% { opacity: 0.18; }
+  50%      { opacity: 0.38; }
+}
+
+/* ── SVG wrapper ── */
+.tl-svg-wrap {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ── En-tête colonnes ── */
+.tl-header {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0 6px;
+  margin-bottom: 2px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-surface);
+}
+
+.tl-col-head {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  user-select: none;
+}
+
+/* ── Empty state ── */
+.tl-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.7;
+}
+
+/* ================================================================
+   TOOLTIP — v3.1
+================================================================ */
+.tp-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0;
+  min-width: 220px;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  overflow: hidden;
+}
+
+.tp-tooltip.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.tp-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.tp-tip-emoji {
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.tp-tip-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tp-tip-type {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tp-tip-actor {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.tp-tip-date {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  white-space: nowrap;
+  background: var(--bg-surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tp-tip-body {
+  padding: 8px 12px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tp-tip-body:empty {
+  display: none;
+}
+
+.tp-tip-route {
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+}
