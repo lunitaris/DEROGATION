@@ -127,6 +127,14 @@
 .btn-meeting.has-content { border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.12); }
 .meeting-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f97316; flex-shrink: 0; }
 
+/* STATUT SN — badge-select interactif (hero-top) */
+.status-badge-select { width: auto; flex: 0 0 auto; appearance: none; -webkit-appearance: none; padding: 2px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; border: 1px solid; cursor: pointer; line-height: 1.6; }
+.status-badge-select:hover { filter: brightness(1.1); }
+.status-badge-select-new       { background: var(--status-new-bg);       color: var(--status-new-text);       border-color: var(--status-new-border); }
+.status-badge-select-en_revue  { background: var(--status-review-bg);    color: var(--status-review-text);    border-color: var(--status-review-border); }
+.status-badge-select-validated { background: var(--status-validated-bg); color: var(--status-validated-text); border-color: var(--status-validated-border); }
+.status-badge-select-expired   { background: var(--status-expired-bg);   color: var(--status-expired-text);   border-color: var(--status-expired-border); }
+
 /* HERO — porteur inline (sous ticket ID) */
 .sidebar-hero-porteur { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11px; min-width: 0; }
 .sidebar-hero-avatar-sm { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; flex-shrink: 0; }

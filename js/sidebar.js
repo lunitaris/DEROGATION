@@ -52,7 +52,12 @@ function renderSidebar(id) {
   _sidebarBodyEl.innerHTML = `
     <!-- HERO -->
     <div class="sidebar-hero">
-      <div class="sidebar-hero-top">${urgencyBadge(d)}${statusBadge(d.status)}</div>
+      <div class="sidebar-hero-top">
+        ${urgencyBadge(d)}
+        <select class="status-badge-select status-badge-select-${d.status}" onchange="quickUpdate('${id}','status',this.value)">
+          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${d.status===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
       <div class="sidebar-title">${esc(d.title)||'(Sans titre)'}</div>
       <div class="sidebar-ticket-row">
         <span class="sidebar-ticket">${esc(d.ticketId)||'Sans ticket ID'}</span>
@@ -111,19 +116,6 @@ function renderSidebar(id) {
         <textarea class="quick-notes-textarea" id="quick-notes" placeholder="Idées, rappels, contexte informel, liens utiles…" oninput="autoResizeTA(this);scheduleQuickNotesSave('${id}')">${esc(d.notes||'')}</textarea>
       </div>
       <div class="quick-notes-hint" id="quick-notes-hint"></div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- STATUT SN -->
-    <div class="sidebar-section">
-      <div class="section-label">Cycle de vie ServiceNow</div>
-      <div class="status-bloc">
-        <div class="status-bloc-label">Statut SN</div>
-        <select class="status-select-inline" style="flex:1;" onchange="quickUpdate('${id}','status',this.value)">
-          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${d.status===v?'selected':''}>${l}</option>`).join('')}
-        </select>
-      </div>
     </div>
 
     <div class="sidebar-divider"></div>
