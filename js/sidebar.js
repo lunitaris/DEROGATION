@@ -47,6 +47,10 @@ function renderSidebar(id) {
   const checkedSections = NOTES_SECTIONS.filter(s => checks[s.key]).length;
   const avatarLetter = (d.applicant?.name||'?')[0].toUpperCase();
   const hasMeetingNotes = (d.meetingNotes||'').trim().length > 0;
+  /* Bouton vérif ServiceNow (hero-top) */
+  const lcDays = d.dates.lastCheckedAt ? Math.floor((new Date() - new Date(d.dates.lastCheckedAt)) / 86400000) : null;
+  const lcBtnLabel = lcDays === null ? '⚠ Jamais vérifié' : lcDays === 0 ? '✓ Vérifié auj.' : lcDays === 1 ? '✓ Vérifié hier' : `✓ Vérifié J+${lcDays}`;
+  const lcBtnCls = lastCheckClass(d.dates.lastCheckedAt);
 
   const _sidebarBodyEl = document.getElementById('sidebar-body');
   _sidebarBodyEl.innerHTML = `
@@ -57,6 +61,7 @@ function renderSidebar(id) {
         <select class="status-badge-select status-badge-select-${d.status}" onchange="quickUpdate('${id}','status',this.value)">
           ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${d.status===v?'selected':''}>${l}</option>`).join('')}
         </select>
+        <button class="lc-verify-btn ${lcBtnCls}" onclick="markCheckedNow('${id}')" title="Cliquer pour marquer vérifié maintenant dans ServiceNow">${lcBtnLabel}</button>
       </div>
       <div class="sidebar-title">${esc(d.title)||'(Sans titre)'}</div>
       <div class="sidebar-ticket-row">
@@ -75,33 +80,64 @@ function renderSidebar(id) {
 
     <div class="sidebar-divider"></div>
 
-    <!-- DERNIÈRE ACTION JOURNAL -->
-    ${(() => {
-      const log = d.actionLog || [];
-      if (!log.length) return `
+    <!-- CYCLE DE VIE -->
     <div class="sidebar-section">
-      <div class="section-label">Dernière action journal</div>
-      <div class="sb-lastaction-empty">Aucune entrée dans le journal.</div>
-    </div>`;
-      const la = [...log].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-      const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
-      const et    = ETYPES[la.etype || 'commentaire'] || ETYPES.commentaire;
-      const laText = la.text ? (la.text.length > 100 ? la.text.substring(0, 100) + '…' : la.text) : '';
-      return `
-    <div class="sidebar-section">
-      <div class="section-label">Dernière action journal</div>
-      <div class="sb-lastaction-wrap">
-        <div class="sb-lastaction-header">
-          <span class="sb-lastaction-meta">
-            <span style="color:${actor.color}">${actor.emoji} ${actor.label}</span>
-            <span style="color:${et.color}">${et.emoji} ${et.label}</span>
-          </span>
-          <span class="sb-lastaction-date">${la.date ? formatDate(la.date) : '—'}</span>
+      <div class="section-label">Cycle de vie</div>
+      <div class="lc-grid">
+        <div class="lc-item">
+          <span class="lc-label">Créé le</span>
+          <input type="date" class="lc-date-input" value="${toDateInputVal(d.dates.createdAt)}" onchange="quickUpdateDate('${id}','createdAt',this.value)">
         </div>
-        ${laText ? `<div class="sb-lastaction-text">${esc(laText)}</div>` : ''}
+        <div class="lc-item">
+          <span class="lc-label">Mis à jour</span>
+          <span class="lc-val muted">${formatDate(d.dates.updatedAt) || '—'}</span>
+        </div>
+        <div class="lc-item">
+          <span class="lc-label">Expire le</span>
+          <input type="date" class="lc-date-input ${expiryClass(daysUntil(d.dates.expiresAt))}" value="${toDateInputVal(d.dates.expiresAt)}" onchange="quickUpdateDate('${id}','expiresAt',this.value)">
+        </div>
+        <div class="lc-item">
+          <span class="lc-label">Next date clé</span>
+          <input type="date" class="lc-date-input ${followupDays!==null&&followupDays<0?'expiry-past':''}" value="${toDateInputVal(d.dates.nextFollowup)}" onchange="quickUpdateDate('${id}','nextFollowup',this.value)">
+        </div>
+        ${(() => {
+          const log = d.actionLog || [];
+          if (!log.length) return `
+        <div class="tp-lastaction-row">
+          <div class="tp-lastaction-header">
+            <span class="lc-label">Dernière action journal</span>
+          </div>
+          <span class="lc-val muted">—</span>
+        </div>`;
+          const la = [...log].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+          const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
+          const et    = ETYPES[la.etype || 'commentaire'] || ETYPES.commentaire;
+          const laText = la.text ? (la.text.length > 80 ? la.text.substring(0, 80) + '…' : la.text) : '';
+          return `
+        <div class="tp-lastaction-row">
+          <div class="tp-lastaction-header">
+            <span class="lc-label">Dernière action journal</span>
+            <span class="lc-label tp-lastaction-date">${la.date ? formatDate(la.date) : '—'}</span>
+          </div>
+          <div class="tp-lastaction-body">
+            <span class="tp-lastaction-meta">
+              <span style="color:${actor.color}">${actor.emoji} ${actor.label}</span>
+              <span style="color:${et.color}">${et.emoji} ${et.label}</span>
+            </span>
+            ${laText ? `<span class="tp-lastaction-text">${esc(laText)}</span>` : ''}
+          </div>
+        </div>`;
+        })()}
       </div>
-    </div>`;
-    })()}
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- INDICATEURS -->
+    <div class="sidebar-section">
+      <div class="section-label">Indicateurs</div>
+      ${sharedIndicatorsHtml(d.risk, d.notesStructured)}
+    </div>
 
     <div class="sidebar-divider"></div>
 
@@ -149,34 +185,6 @@ function renderSidebar(id) {
           <textarea class="meeting-notes-textarea" id="meeting-notes" placeholder="Points à aborder, questions à poser, décisions à prendre…" oninput="autoResizeTA(this);scheduleMeetingNotesSave('${id}')">${esc(d.meetingNotes||'')}</textarea>
         </div>
         <div class="meeting-notes-hint" id="meeting-notes-hint"></div>
-      </div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- RISQUE -->
-    <div class="sidebar-section">
-      <div class="section-label">Profil de risque</div>
-      ${sharedRiskHtml(d.risk, RISK_PARAMS_SIDEBAR)}
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- DATES -->
-    <div class="sidebar-section">
-      <div class="section-label">Cycle de vie</div>
-      <div class="info-grid">
-        <div class="info-item"><div class="info-item-label">Créée le</div><div class="info-item-value">${formatDate(d.dates.createdAt)}</div></div>
-        <div class="info-item"><div class="info-item-label">Mise à jour</div><div class="info-item-value">${formatDate(d.dates.updatedAt)}</div></div>
-        <div class="info-item"><div class="info-item-label">Expiration</div><div class="info-item-value">${expiryLabel(d.dates.expiresAt)}</div></div>
-        <div class="info-item"><div class="info-item-label">Prochaine relance</div><div class="info-item-value ${followupDays!==null&&followupDays<0?'expiry-danger':''}">${d.dates.nextFollowup?formatDate(d.dates.nextFollowup)+(followupDays!==null&&followupDays<0?' ⚠':''):'—'}</div></div>
-        <div class="info-item" style="grid-column:1/-1;">
-          <div class="info-item-label">Dernière vérification ServiceNow</div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px;">
-            <span class="info-item-value ${lastCheckClass(d.dates.lastCheckedAt)}">${d.dates.lastCheckedAt?formatDate(d.dates.lastCheckedAt)+lastCheckSuffix(d.dates.lastCheckedAt):'Jamais vérifié'}</span>
-            <button class="btn-ghost" style="font-size:11px;padding:3px 10px;" onclick="markCheckedNow('${d.id}')">✓ Vérifier maintenant</button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -243,6 +251,10 @@ function renderSidebar(id) {
 /* SIDEBAR INTERACTIONS */
 function quickUpdate(id, field, value) {
   Store.update(id, { [field]: value });
+  renderAll();
+}
+function quickUpdateDate(id, field, val) {
+  Store.update(id, { [field]: val || null });
   renderAll();
 }
 

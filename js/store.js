@@ -216,7 +216,8 @@ const Store = {
       },
       urgency: { level: fields.urgency !== undefined ? fields.urgency : (d.urgency?.level || '-') },
       dates: {
-        createdAt: d.dates.createdAt, updatedAt: now,
+        createdAt: fields.createdAt !== undefined ? (fields.createdAt ? new Date(fields.createdAt).toISOString() : d.dates.createdAt) : d.dates.createdAt,
+        updatedAt: now,
         expiresAt: fields.expiresAt !== undefined ? (fields.expiresAt ? new Date(fields.expiresAt).toISOString() : null) : d.dates.expiresAt,
         nextFollowup: fields.nextFollowup !== undefined ? (fields.nextFollowup ? new Date(fields.nextFollowup).toISOString() : null) : d.dates.nextFollowup,
         lastCheckedAt: fields.lastCheckedAt !== undefined ? (fields.lastCheckedAt ? new Date(fields.lastCheckedAt).toISOString() : null) : (d.dates.lastCheckedAt || null)

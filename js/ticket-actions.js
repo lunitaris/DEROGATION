@@ -282,8 +282,19 @@ function tpUpdateDossierProgress() {
 }
 
 /* ================================================================
-   CYCLE DE VIE — "Vérifier maintenant"
+   CYCLE DE VIE — dates éditables + "Vérifier maintenant"
 ================================================================ */
+function tpUpdateDate(field, val) {
+  if (!tp_currentId) return;
+  Store.update(tp_currentId, { [field]: val || null });
+  /* Re-render partiel : dates + bandeau identité (expiry badge) */
+  const d = Store.getById(tp_currentId);
+  if (d) {
+    renderLifecycle(d);
+    renderIdentityStrip(d);
+  }
+}
+
 function tpMarkCheckedNow() {
   if (!tp_currentId) return;
   const now = new Date().toISOString();
@@ -292,7 +303,7 @@ function tpMarkCheckedNow() {
   const el = document.getElementById('tp-lastcheck-val');
   if (el) {
     el.textContent = 'Aujourd\'hui';
-    el.className = 'tp-lc-val ' + lastCheckClass(now);
+    el.className = 'lc-val ' + lastCheckClass(now);
   }
   tpShowToast('✓ Dernière vérification mise à jour');
 }

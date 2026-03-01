@@ -225,8 +225,8 @@ function renderRiskProfile(d) {
   const el = document.getElementById('tp-risk-profile');
   if (!el) return;
   el.innerHTML = `
-    <div class="tp-summary-col-title">Profil de risque</div>
-    ${sharedRiskHtml(d.risk, RISK_PARAMS_TICKET)}`;
+    <div class="tp-summary-col-title">Indicateurs</div>
+    ${sharedIndicatorsHtml(d.risk, d.notesStructured)}`;
 }
 
 /* ================================================================
@@ -346,8 +346,8 @@ function renderLifecycle(d) {
     lastActionHtml = `
         <div class="tp-lastaction-row">
           <div class="tp-lastaction-header">
-            <span class="tp-lc-label">Dernière action journal</span>
-            <span class="tp-lc-label tp-lastaction-date">${formatDate(la.date)}</span>
+            <span class="lc-label">Dernière action journal</span>
+            <span class="lc-label tp-lastaction-date">${formatDate(la.date)}</span>
           </div>
           <div class="tp-lastaction-body">
             <span class="tp-lastaction-meta">
@@ -361,40 +361,38 @@ function renderLifecycle(d) {
     lastActionHtml = `
         <div class="tp-lastaction-row">
           <div class="tp-lastaction-header">
-            <span class="tp-lc-label">Dernière action journal</span>
+            <span class="lc-label">Dernière action journal</span>
           </div>
-          <div class="tp-lc-val muted">—</div>
+          <div class="lc-val muted">—</div>
         </div>`;
   }
 
   el.innerHTML = `
     <div class="tp-summary-col-title">Cycle de vie</div>
-    <div class="tp-lifecycle-grid">
-      <div class="tp-lc-item">
-        <span class="tp-lc-label">Créé le</span>
-        <span class="tp-lc-val">${formatDate(dates.createdAt) || '—'}</span>
+    <div class="lc-grid">
+      <div class="lc-item">
+        <span class="lc-label">Créé le</span>
+        <input type="date" class="lc-date-input" value="${toDateInputVal(dates.createdAt)}" onchange="tpUpdateDate('createdAt',this.value)">
       </div>
-      <div class="tp-lc-item">
-        <span class="tp-lc-label">Mis à jour</span>
-        <span class="tp-lc-val">${formatDate(dates.updatedAt) || '—'}</span>
+      <div class="lc-item">
+        <span class="lc-label">Mis à jour</span>
+        <span class="lc-val muted">${formatDate(dates.updatedAt) || '—'}</span>
       </div>
-      <div class="tp-lc-item">
-        <span class="tp-lc-label">Expire le</span>
-        <span class="tp-lc-val ${expiryClass(daysUntil(dates.expiresAt))}">${formatDate(dates.expiresAt) || '—'}</span>
+      <div class="lc-item">
+        <span class="lc-label">Expire le</span>
+        <input type="date" class="lc-date-input ${expiryClass(daysUntil(dates.expiresAt))}" value="${toDateInputVal(dates.expiresAt)}" onchange="tpUpdateDate('expiresAt',this.value)">
       </div>
-      <div class="tp-lc-item">
-        <span class="tp-lc-label">Prochaine relance</span>
-        <span class="tp-lc-val ${dates.nextFollowup ? '' : 'muted'}">${formatDate(dates.nextFollowup) || '—'}</span>
+      <div class="lc-item">
+        <span class="lc-label">Next date clé</span>
+        <input type="date" class="lc-date-input" value="${toDateInputVal(dates.nextFollowup)}" onchange="tpUpdateDate('nextFollowup',this.value)">
       </div>
       ${lastActionHtml}
-      <div class="tp-lastcheck-row">
-        <div class="tp-lastcheck-info">
-          <div class="tp-lc-label">Dernière vérif. ServiceNow</div>
-          <div class="tp-lc-val ${lcCls}" id="tp-lastcheck-val">
-            ${dates.lastCheckedAt ? formatDate(dates.lastCheckedAt) + lcSuffix : '—'}
-          </div>
+      <div class="lc-check-row">
+        <div class="lc-check-info">
+          <span class="lc-label">Dernière vérif. ServiceNow</span>
+          <span class="lc-val ${lcCls}" id="tp-lastcheck-val">${dates.lastCheckedAt ? formatDate(dates.lastCheckedAt) + lcSuffix : '—'}</span>
         </div>
-        <button class="tp-lastcheck-btn" onclick="tpMarkCheckedNow()">✓ Vérifier maintenant</button>
+        <button class="lc-check-btn" onclick="tpMarkCheckedNow()">✓ Vérifier maintenant</button>
       </div>
     </div>`;
 }

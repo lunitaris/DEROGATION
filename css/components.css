@@ -110,7 +110,6 @@
 .notes-block-check { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); cursor: pointer; transition: all var(--transition); border: 1px solid var(--border); color: var(--text-muted); background: none; }
 .notes-block-check:hover { border-color: var(--status-validated-text); color: var(--status-validated-text); }
 .notes-block-check.checked { background: rgba(63,185,80,0.15); color: var(--status-validated-text); border-color: var(--status-validated-border); }
-.notes-block-check.checked::before { content: '✓ '; }
 .notes-block-body { padding: 0 12px 10px; }
 .notes-block-body.collapsed { display: none; }
 .notes-textarea { width: 100%; min-height: 70px; resize: none; overflow-y: hidden; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px; color: var(--text-primary); font-family: var(--font); font-size: 13px; line-height: 1.5; }
@@ -134,6 +133,14 @@
 .status-badge-select-en_revue  { background: var(--status-review-bg);    color: var(--status-review-text);    border-color: var(--status-review-border); }
 .status-badge-select-validated { background: var(--status-validated-bg); color: var(--status-validated-text); border-color: var(--status-validated-border); }
 .status-badge-select-expired   { background: var(--status-expired-bg);   color: var(--status-expired-text);   border-color: var(--status-expired-border); }
+
+/* BOUTON VÉRIF SERVICENOW (hero-top, poussé à droite) */
+.lc-verify-btn { margin-left: auto; flex: 0 0 auto; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid var(--border); background: none; cursor: pointer; white-space: nowrap; transition: all var(--transition); color: var(--text-muted); }
+.lc-verify-btn:hover { background: var(--bg-elevated); }
+.lc-verify-btn.last-check-ok   { color: #3fb950; border-color: rgba(63,185,80,0.45); }
+.lc-verify-btn.last-check-warn { color: #f59e42; border-color: rgba(245,158,66,0.45); }
+.lc-verify-btn.last-check-late { color: #f85149; border-color: rgba(248,81,73,0.45); }
+.lc-verify-btn.last-check-none { color: #f85149; border-color: rgba(248,81,73,0.45); }
 
 /* HERO — porteur inline (sous ticket ID) */
 .sidebar-hero-porteur { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11px; min-width: 0; }
@@ -193,6 +200,39 @@
 .action-log-more:hover { color: var(--text-primary); }
 .action-log-hint { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 3px; transition: color 0.3s; }
 .action-log-hint.saved { color: var(--status-validated-text); }
+
+/* CYCLE DE VIE — partagé sidebar ↔ ticket */
+.lc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lc-item { display: flex; flex-direction: column; gap: 3px; }
+.lc-label { font-size: 11px; color: var(--text-muted); }
+.lc-val { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+.lc-val.muted { color: var(--text-muted); font-weight: 400; }
+.lc-date-input { font-size: 12px; font-weight: 500; color: var(--text-primary); background: var(--bg-input); border: 1px solid var(--border-muted); border-radius: var(--radius-sm); padding: 3px 6px; width: 126px; cursor: pointer; }
+.lc-date-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(88,166,255,0.15); }
+.lc-date-input.expiry-warn   { color: #f0a830; border-color: rgba(240,168,48,0.5); }
+.lc-date-input.expiry-danger { color: #f59e42; border-color: rgba(245,158,66,0.5); }
+.lc-date-input.expiry-past   { color: #f85149; border-color: rgba(248,81,73,0.5); }
+.lc-check-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border-muted); margin-top: 2px; }
+.lc-check-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.lc-check-btn { font-size: 12px; padding: 5px 10px; background: var(--bg-hover); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-secondary); cursor: pointer; transition: all var(--transition); white-space: nowrap; }
+.lc-check-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+/* Dernière action journal (dans lc-grid — partagé sidebar ↔ ticket) */
+.tp-lastaction-row { grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid var(--border-muted); margin-top: 4px; }
+.tp-lastaction-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.tp-lastaction-date { font-family: 'JetBrains Mono', monospace; }
+.tp-lastaction-body { display: flex; flex-direction: column; gap: 3px; }
+.tp-lastaction-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; }
+.tp-lastaction-text { font-size: 12px; color: var(--text-secondary); line-height: 1.4; word-break: break-word; }
+
+/* INDICATEURS — liste compacte (partagée sidebar ↔ ticket) */
+.risk-ind-list { display: flex; flex-direction: column; }
+.risk-ind-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-muted); }
+.risk-ind-row:last-child { border-bottom: none; }
+.risk-ind-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.risk-ind-yes  { font-size: 11px; font-weight: 600; color: #3fb950; white-space: nowrap; }
+.risk-ind-no   { font-size: 11px; font-weight: 600; color: #f85149; white-space: nowrap; }
+.risk-ind-warn { font-size: 11px; font-weight: 600; color: #f59e42; white-space: nowrap; }
+.risk-ind-na   { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
 /* QUICK ACTIONS */
 .contact-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

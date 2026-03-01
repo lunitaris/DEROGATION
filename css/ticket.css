@@ -689,79 +689,10 @@ body {
 #tp-nb-remediations .tp-notes-block-ta:focus { outline: 1px solid rgba(63,185,80,0.4); border-radius: var(--radius-sm); }
 
 /* ================================================================
-   CYCLE DE VIE (panneau droit)
+   CYCLE DE VIE (panneau droit) — classes .lc-* définies dans components.css
 ================================================================ */
-.tp-lifecycle-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.tp-lc-item { display: flex; flex-direction: column; gap: 2px; }
-.tp-lc-label { font-size: 11px; color: var(--text-muted); }
-.tp-lc-val { font-size: 13px; color: var(--text-primary); font-weight: 500; }
-.tp-lc-val.muted { color: var(--text-muted); font-weight: 400; }
 
-.tp-lastcheck-row {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-}
-.tp-lastcheck-info { flex: 1; }
-.tp-lastcheck-btn {
-  font-size: 12px;
-  padding: 5px 10px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
-  white-space: nowrap;
-}
-.tp-lastcheck-btn:hover {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
-}
-
-/* ── Dernière action journal (dans Cycle de vie) ── */
-.tp-lastaction-row {
-  grid-column: 1 / -1;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-}
-.tp-lastaction-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-.tp-lastaction-date {
-  font-family: 'JetBrains Mono', monospace;
-}
-.tp-lastaction-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.tp-lastaction-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.tp-lastaction-text {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  word-break: break-word;
-}
+/* ── Dernière action journal — classes .tp-lastaction-* définies dans components.css ── */
 
 /* ================================================================
    TOAST
