@@ -244,10 +244,15 @@ function renderJournalShell(d) {
       <div class="tp-section-title">Journal d'actions</div>
       <div class="tp-j-addform">
         <div class="tp-j-addform-row">
-          <select id="tp-j-actor"></select>
-          <select id="tp-j-etype"></select>
+          <select id="tp-j-actor" onchange="tpOnJFormChange()"></select>
+          <select id="tp-j-etype" onchange="tpOnJFormChange()"></select>
           <input type="date" id="tp-j-date">
           <button class="tp-j-add-btn" onclick="tpAddJournalEntry()">+ Ajouter</button>
+        </div>
+        <div id="tp-j-quality" class="tp-j-quality-row" style="display:none">
+          <span class="tp-j-quality-label">Qualité :</span>
+          <button class="tp-quality-btn incomplet active" onclick="tpSetFormQuality('incomplet')">⚠️ Incomplet</button>
+          <button class="tp-quality-btn complet" onclick="tpSetFormQuality('complet')">✅ Complet</button>
         </div>
         <textarea id="tp-j-message" class="tp-j-message"
           placeholder="Décrivez l'action ou la décision\u2026"

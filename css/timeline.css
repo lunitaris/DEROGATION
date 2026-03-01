@@ -373,3 +373,98 @@
   align-items: center;
   background: var(--bg-card);
 }
+
+/* ================================================================
+   QUALITÉ DE RÉPONSE — formulaire d'ajout + lignes existantes
+================================================================ */
+
+/* Ligne qualité dans le formulaire d'ajout */
+.tp-j-quality-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  margin-bottom: 4px;
+  flex-wrap: nowrap;
+}
+
+.tp-j-quality-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Bloc qualité dans une ligne existante du journal */
+.tp-jrow-quality {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* Bouton qualité — base */
+.tp-quality-btn {
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.6;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  /* override width:100% from base.css */
+  width: auto;
+}
+.tp-quality-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* Actif Complet */
+.tp-quality-btn.active.complet {
+  background: rgba(63, 185, 80, 0.12);
+  border-color: #3FB950;
+  color: #3FB950;
+  font-weight: 600;
+}
+
+/* Actif Incomplet */
+.tp-quality-btn.active.incomplet {
+  background: rgba(245, 158, 66, 0.12);
+  border-color: #f59e42;
+  color: #f59e42;
+  font-weight: 600;
+}
+
+/* Dans les lignes du journal : boutons plus compacts (emoji seulement) */
+.tp-jrow-quality .tp-quality-btn {
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ================================================================
+   GROUPE TIMELINE — bulle hover
+================================================================ */
+.tl-group-bubble rect {
+  transition: opacity 0.15s;
+}
+.tl-group-bubble:hover rect:first-of-type {
+  opacity: 0.22;
+}
+.tl-group-bubble:hover rect:last-of-type {
+  opacity: 0.65;
+}
+
+/* Entrées dans un groupe étendu — légèrement atténuées */
+.tl-in-group .tl-dot {
+  opacity: 0.88;
+}
+.tl-in-group .tl-halo {
+  opacity: 0.04;
+}

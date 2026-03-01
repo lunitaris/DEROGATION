@@ -117,6 +117,15 @@ function tpRenderJournal() {
   const sortedIdx = _tpSortedJournalIndices();
   body.innerHTML = sortedIdx.map(realIdx => {
     const entry = tp_journal[realIdx];
+    const showQuality = entry.etype === 'reponse' && (entry.actor || 'team') === 'demandeur';
+    const quality     = entry.quality || null;
+    const qBtns = showQuality ? `
+        <div class="tp-jrow-quality">
+          <button class="tp-quality-btn incomplet${!quality || quality === 'incomplet' ? ' active' : ''}"
+            onclick="tpUpdateJournalQuality(${realIdx},'incomplet')" title="Réponse incomplète">⚠️</button>
+          <button class="tp-quality-btn complet${quality === 'complet' ? ' active' : ''}"
+            onclick="tpUpdateJournalQuality(${realIdx},'complet')" title="Réponse complète">✅</button>
+        </div>` : '';
     return `
     <div class="tp-jrow" data-real-idx="${realIdx}">
       <div class="tp-jrow-meta">
@@ -130,6 +139,7 @@ function tpRenderJournal() {
         <select class="tp-j-etype-sel" onchange="tpUpdateJournal(${realIdx},'etype',this.value)">
           ${_tpEtypeOptions(entry.etype || 'commentaire')}
         </select>
+        ${qBtns}
         <button class="action-log-btn-remove" onclick="tpRemoveJournalEntry(${realIdx})" title="Supprimer cette entrée">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -163,8 +173,18 @@ function tpAddJournalEntry() {
     if (msgEl) { msgEl.style.borderColor = 'var(--accent)'; msgEl.focus(); }
     return;
   }
+  /* Qualité — uniquement si demandeur + réponse */
+  let quality = null;
+  if (actor === 'demandeur' && etype === 'reponse') {
+    const activeBtn = document.querySelector('#tp-j-quality .tp-quality-btn.active');
+    quality = activeBtn?.classList.contains('complet') ? 'complet' : 'incomplet';
+  }
   if (msgEl) { msgEl.style.borderColor = ''; msgEl.value = ''; }
-  tp_journal.push({ date, text: message, actor, etype });
+  /* Réinitialiser le formulaire qualité sur défaut incomplet */
+  tpSetFormQuality('incomplet');
+  /* Réinitialiser les groupes car la structure peut changer */
+  _tpGroupExpanded = {};
+  tp_journal.push({ date, text: message, actor, etype, quality });
   tpSaveJournal();
   tpRenderJournal();
 }
@@ -172,6 +192,8 @@ function tpAddJournalEntry() {
 function tpRemoveJournalEntry(realIdx) {
   if (realIdx < 0 || realIdx >= tp_journal.length) return;
   tp_journal.splice(realIdx, 1);
+  /* Réinitialiser les groupes car la structure peut changer */
+  _tpGroupExpanded = {};
   tpRenderJournal();
   tpSaveJournal();
 }
@@ -189,6 +211,40 @@ function tpUpdateJournal(realIdx, field, value) {
 function tpSaveJournal() {
   if (!tp_currentId) return;
   Store.updateActionLog(tp_currentId, [...tp_journal]);
+}
+
+/* ================================================================
+   QUALITÉ DE RÉPONSE
+================================================================ */
+
+/**
+ * Affiche/masque le bloc qualité du formulaire selon actor + etype.
+ * Appelé via onchange sur les selects du formulaire d'ajout.
+ */
+function tpOnJFormChange() {
+  const actor = document.getElementById('tp-j-actor')?.value || 'team';
+  const etype = document.getElementById('tp-j-etype')?.value || 'commentaire';
+  const qDiv  = document.getElementById('tp-j-quality');
+  if (qDiv) qDiv.style.display = (actor === 'demandeur' && etype === 'reponse') ? 'flex' : 'none';
+}
+
+/**
+ * Sélectionne la qualité dans le formulaire d'ajout (complet / incomplet).
+ */
+function tpSetFormQuality(val) {
+  document.querySelectorAll('#tp-j-quality .tp-quality-btn').forEach(b => {
+    b.classList.toggle('active', b.classList.contains(val));
+  });
+}
+
+/**
+ * Met à jour la qualité d'une entrée existante du journal.
+ */
+function tpUpdateJournalQuality(realIdx, val) {
+  if (realIdx < 0 || realIdx >= tp_journal.length) return;
+  tp_journal[realIdx].quality = val;
+  tpSaveJournal();
+  tpRenderJournal();
 }
 
 /* ================================================================

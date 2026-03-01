@@ -1,5 +1,5 @@
 /* ================================================================
-   TICKET-TIMELINE.JS  v3.3 — Timeline visuelle SVG
+   TICKET-TIMELINE.JS  v4.0 — Timeline visuelle SVG avec groupes
    Préfixe tp_ pour tout (conventions ticket.html)
    Dépendances : constants.js (ACTORS, ETYPES), helpers.js (esc)
 ================================================================ */
@@ -8,6 +8,18 @@ let _tpTipEl = null;
 function tpGetTip() {
   if (!_tpTipEl) _tpTipEl = document.getElementById('tp-tooltip');
   return _tpTipEl;
+}
+
+/* ── État des groupes (expand/collapse) ── */
+let _tpGroupExpanded = {};  /* { 'g-N': true|false } */
+
+/* ── Etypes qui constituent un échange ── */
+const _TP_EXCHANGE_ETYPES = new Set(['question', 'reponse', 'complement']);
+
+/* Toggle expand/collapse d'un groupe — appelé depuis les onclick SVG */
+function tpToggleGroup(gid) {
+  _tpGroupExpanded[gid] = !_tpGroupExpanded[gid];
+  tpRenderTimeline(tp_journal);
 }
 
 function _tpFormatDateShort(d) {
@@ -23,34 +35,115 @@ function _tpTruncate(s, n) {
 }
 
 /* ================================================================
+   GROUPAGE — construit une liste de nœuds (type: 'entry' | 'group')
+
+   Un groupe commence par une question de l'équipe et inclut toutes
+   les entrées de type échange (question/reponse/complement) qui suivent,
+   jusqu'à la première réponse complète du demandeur OU une entrée
+   hors échange. Les groupes d'une seule entrée ne sont pas créés.
+================================================================ */
+function _tpBuildNodes(sorted) {
+  const nodes = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const entry = sorted[i];
+    const etype = entry.etype || 'commentaire';
+    const actor = entry.actor || 'team';
+
+    /* Un groupe commence par une question de l'équipe */
+    if (etype === 'question' && actor === 'team') {
+      const gid   = 'g-' + i;
+      const group = {
+        type:      'group',
+        id:        gid,
+        entries:   [entry],
+        startDate: entry.date,
+        endDate:   entry.date
+      };
+      let j = i + 1;
+      while (j < sorted.length) {
+        const next   = sorted[j];
+        const nEtype = next.etype || 'commentaire';
+        /* Arrêt si l'entrée suivante n'est pas un échange */
+        if (!_TP_EXCHANGE_ETYPES.has(nEtype)) break;
+        group.entries.push(next);
+        if (next.date) group.endDate = next.date;
+        /* Fin si réponse complète du demandeur */
+        if (nEtype === 'reponse' && (next.actor || 'team') === 'demandeur' && next.quality === 'complet') {
+          j++;
+          break;
+        }
+        j++;
+      }
+      /* Grouper seulement si l'échange comporte plusieurs entrées */
+      if (group.entries.length > 1) {
+        nodes.push(group);
+        i = j;
+      } else {
+        nodes.push({ type: 'entry', entry });
+        i++;
+      }
+    } else {
+      nodes.push({ type: 'entry', entry });
+      i++;
+    }
+  }
+  return nodes;
+}
+
+/* ================================================================
+   APLATISSEMENT — transforme les nœuds en items à rendre
+   Respecte l'état expand/collapse de chaque groupe.
+================================================================ */
+function _tpFlattenItems(nodes) {
+  const items = [];
+  for (const node of nodes) {
+    if (node.type === 'entry') {
+      items.push({ type: 'entry', entry: node.entry, inGroup: null });
+    } else {
+      if (_tpGroupExpanded[node.id]) {
+        /* Groupe étendu : toutes les entrées + bouton collapse */
+        for (const e of node.entries) {
+          items.push({ type: 'entry', entry: e, inGroup: node.id });
+        }
+        items.push({ type: 'group-collapse', group: node });
+      } else {
+        /* Groupe réduit : bulle unique */
+        items.push({ type: 'group', group: node });
+      }
+    }
+  }
+  return items;
+}
+
+/* ================================================================
    "Ball in court" — après cet événement, qui doit agir ?
-   Retourne la clé acteur dont la ligne verticale sera colorée, ou null.
-   Couleur du segment : orange si review, ambre/or si final_review, bleu si demandeur, rouge sinon.
+   Prend en compte le champ `quality` pour les réponses du demandeur.
+   Réponse incomplète → ball reste sur demandeur, pas transfert team.
 ================================================================ */
 function _tpBallInCourt(entry) {
-  const etype = entry.etype || '';
-  const actor = entry.actor || 'team';
+  const etype   = entry.etype || '';
+  const actor   = entry.actor || 'team';
+  const quality = entry.quality || null;
 
   switch (etype) {
     case 'soumission':      return 'team';
 
     case 'demande_info':
-    case 'question':        // ← alias
+    case 'question':
       if (actor === 'demandeur') return 'team';
-      return 'demandeur';  // team → demandeur
+      return 'demandeur';  /* team pose une question → demandeur doit répondre */
 
     case 'reponse_info':
-    case 'reponse':         // ← alias
+    case 'reponse':
+      /* Réponse incomplète du demandeur → ball reste sur demandeur */
+      if (actor === 'demandeur' && quality === 'incomplet') return 'demandeur';
       return 'team';
 
     case 'complement':      return 'team';
-
-    case 'commentaire':
-      return 'team';
-
-    case 'escalade':        return 'team';  // review en cours → segment orange
-    case 'final_review':    return 'team';  // final review en cours → segment ambre
-
+    case 'commentaire':     return 'team';
+    case 'escalade':        return 'team';  /* review → segment orange */
+    case 'final_review':    return 'team';  /* final review → segment ambre */
     case 'validation':      return null;
     case 'refus':           return null;
     default:                return 'team';
@@ -59,7 +152,7 @@ function _tpBallInCourt(entry) {
 
 
 /* ================================================================
-   RENDER
+   RENDER PRINCIPAL
 ================================================================ */
 function tpRenderTimeline(entries) {
   const wrap = document.getElementById('tp-timeline-wrap');
@@ -77,10 +170,15 @@ function tpRenderTimeline(entries) {
 
   const sorted = [...entries].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
+  /* ── Build nodes & flatten ── */
+  const nodes = _tpBuildNodes(sorted);
+  const items = _tpFlattenItems(nodes);
+
   /* ── Layout ── */
   const actorKeys = Object.keys(ACTORS);
   const colW      = Math.floor((wrap.clientWidth || 340) / actorKeys.length);
   const totalW    = colW * actorKeys.length;
+  const centerX   = Math.round(totalW / 2);
   const padTop    = 30;
   const spacingY  = 56;
   const dotR      = 7;
@@ -90,57 +188,61 @@ function tpRenderTimeline(entries) {
     actorX[k] = Math.round((i + 0.5) * colW);
   });
 
-  const yPositions = [];
-  sorted.forEach((_, i) => { yPositions.push(i * spacingY); });
-  const totalH = padTop + (sorted.length - 1) * spacingY + 60;
+  /* Y position per item */
+  const yPositions = items.map((_, i) => i * spacingY);
+  const totalH = padTop + (items.length > 0 ? (items.length - 1) * spacingY : 0) + 60;
 
-  /* ── Date bands ── */
+  /* ── Date bands (basées sur les entrées réelles) ── */
   const dateBands = [];
   let curDate = null, bandStart = 0;
-  sorted.forEach((e, i) => {
-    const d = (e.date || '').substring(0, 10);
+  items.forEach((item, i) => {
+    const d = item.type === 'entry' ? (item.entry.date || '').substring(0, 10) : null;
     if (d !== curDate) {
       if (curDate !== null) dateBands.push({ date: curDate, startIdx: bandStart, endIdx: i - 1 });
       curDate = d;
       bandStart = i;
     }
-    if (i === sorted.length - 1) dateBands.push({ date: curDate, startIdx: bandStart, endIdx: i });
+    if (i === items.length - 1) dateBands.push({ date: curDate, startIdx: bandStart, endIdx: i });
   });
 
-  /* Aujourd'hui */
+  /* Ligne aujourd'hui */
   const todayStr = new Date().toISOString().substring(0, 10);
   let todayY = null;
-  const lastDate = (sorted[sorted.length - 1].date || '').substring(0, 10);
-  if (todayStr > lastDate) {
-    todayY = padTop + (sorted.length - 1) * spacingY + 50;
+  const lastEntryItem = [...items].reverse().find(it => it.type === 'entry');
+  if (lastEntryItem) {
+    const lastDate = (lastEntryItem.entry.date || '').substring(0, 10);
+    if (todayStr > lastDate) {
+      todayY = padTop + (items.length - 1) * spacingY + 50;
+    }
   }
 
-  /* ── Ball-in-court : compute segments ── */
-  // Pour chaque événement i, on calcule qui doit agir APRÈS cet événement
-  // On trace un segment rouge vertical sur la colonne de cet acteur
-  // depuis le point i jusqu'au point i+1
+  /* ── Ball-in-court segments (entrées uniquement) ── */
   const ballSegments = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const targetActor = _tpBallInCourt(sorted[i]);
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.type !== 'entry') continue;
+
+    const targetActor = _tpBallInCourt(item.entry);
     if (!targetActor || actorX[targetActor] === undefined) continue;
 
-    const yStart = padTop + yPositions[i];
+    const yStart   = padTop + yPositions[i];
+    const nextItem = items[i + 1];
     let yEnd;
-    if (i < sorted.length - 1) {
+    if (nextItem) {
       yEnd = padTop + yPositions[i + 1];
     } else {
       yEnd = todayY !== null ? todayY : yStart + 30;
     }
     ballSegments.push({
-      actor: targetActor,
-      etype: sorted[i].etype || '',   // pour déterminer la couleur
-      x: actorX[targetActor],
+      actor:  targetActor,
+      etype:  item.entry.etype || '',
+      x:      actorX[targetActor],
       yStart: yStart + dotR + 2,
-      yEnd: yEnd - dotR - 2
+      yEnd:   yEnd   - dotR - 2
     });
   }
 
-  /* ── Header ── */
+  /* ── Header colonnes ── */
   let headerHtml = '<div class="tl-header">';
   actorKeys.forEach(k => {
     const a = ACTORS[k];
@@ -160,7 +262,6 @@ function tpRenderTimeline(entries) {
          '<feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>' +
          '<feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.35 0"/>' +
          '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
-
   actorKeys.forEach(k => {
     const a = ACTORS[k];
     svg += `<linearGradient id="tl-guide-${k}" x1="0" y1="0" x2="0" y2="1">` +
@@ -181,19 +282,19 @@ function tpRenderTimeline(entries) {
     }
   });
 
-  /* Guides verticaux (légers) */
+  /* Guides verticaux */
   actorKeys.forEach(k => {
     const x = actorX[k];
     svg += `<line x1="${x}" y1="0" x2="${x}" y2="${svgH}"` +
            ` stroke="url(#tl-guide-${k})" stroke-width="1"/>`;
   });
 
-  /* ── SEGMENTS "ball in court" ──────────────────────────────────────────
-     ambre   #F1C40F : final review (etype final_review)
-     orange  #f59e42 : review (etype escalade)
-     bleu    #42a5f5 : en attente du demandeur (acteur externe)
-     rouge   #e53935 : équipe dérog doit agir (interne)
-  ─────────────────────────────────────────────────────────────────────── */
+  /* ── Segments "ball in court" ────────────────────────────────────
+     ambre  #F1C40F : final review
+     orange #f59e42 : review (escalade)
+     bleu   #42a5f5 : en attente du demandeur
+     rouge  #e53935 : équipe dérog doit agir
+  ─────────────────────────────────────────────────────────────── */
   ballSegments.forEach(seg => {
     const x = seg.x;
     if (seg.yEnd <= seg.yStart) return;
@@ -205,7 +306,8 @@ function tpRenderTimeline(entries) {
                         : isReview      ? '#f59e42'
                         : isExternal    ? '#42a5f5'
                         :                 '#e53935';
-    const segClass      = 'tl-ball-segment ' + ((isFinalReview || isReview || isExternal) ? 'tl-ball-external' : 'tl-ball-internal');
+    const segClass      = 'tl-ball-segment ' +
+      ((isFinalReview || isReview || isExternal) ? 'tl-ball-external' : 'tl-ball-internal');
 
     svg += `<rect x="${x - 5}" y="${seg.yStart}" width="10" height="${seg.yEnd - seg.yStart}"` +
            ` rx="5" fill="${segColor}" opacity="0.08" class="${segClass}"/>`;
@@ -224,96 +326,169 @@ function tpRenderTimeline(entries) {
            ` fill="var(--danger)">Aujourd'hui</text>`;
   }
 
-  /* ── Flèches entre points ── */
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const e1 = sorted[i], e2 = sorted[i + 1];
-    const a1 = e1.actor || 'team', a2 = e2.actor || 'team';
-    const x1 = actorX[a1], y1 = padTop + yPositions[i];
-    const x2 = actorX[a2], y2 = padTop + yPositions[i + 1];
-    const srcColor = (ACTORS[a1] && ACTORS[a1].color) || '#78909c';
+  /* ── Flèches entre items ── */
+  for (let i = 0; i < items.length - 1; i++) {
+    const item1 = items[i];
+    const item2 = items[i + 1];
 
-    // Arrivée juste au-dessus du dot destination (bord du cercle)
+    /* x1 source */
+    let x1, srcColor;
+    if (item1.type === 'entry') {
+      x1 = actorX[item1.entry.actor || 'team'];
+      srcColor = (ACTORS[item1.entry.actor || 'team']?.color) || '#78909c';
+    } else if (item1.type === 'group') {
+      x1 = centerX;
+      srcColor = '#78909c';
+    } else {
+      continue;  /* group-collapse → pas de flèche depuis */
+    }
+
+    /* x2 destination */
+    let x2;
+    if (item2.type === 'entry') {
+      x2 = actorX[item2.entry.actor || 'team'];
+    } else if (item2.type === 'group' || item2.type === 'group-collapse') {
+      x2 = centerX;
+    } else {
+      continue;
+    }
+
+    const y1   = padTop + yPositions[i];
+    const y2   = padTop + yPositions[i + 1];
     const yArr = y2 - dotR - 2;
-    // S-curve symétrique sur la distance totale
     const cpY  = (y1 + 8 + yArr) / 2;
 
     if (x1 === x2) {
       svg += `<line x1="${x1}" y1="${y1 + 8}" x2="${x2}" y2="${yArr}"` +
-            ` stroke="${srcColor}" stroke-width="1.5" opacity="0.35"` +
-            ` stroke-dasharray="4,3"` +
-            ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
+             ` stroke="${srcColor}" stroke-width="1.5" opacity="0.35" stroke-dasharray="4,3"` +
+             ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
     } else {
-      // Bezier cubique : départ horizontal depuis x1, arrivée horizontale sur x2
       svg += `<path d="M${x1},${y1 + 8} C${x1},${cpY} ${x2},${cpY} ${x2},${yArr}"` +
-            ` fill="none" stroke="${srcColor}" stroke-width="1.5" opacity="0.35"` +
-            ` stroke-dasharray="4,3"` +
-            ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
+             ` fill="none" stroke="${srcColor}" stroke-width="1.5" opacity="0.35" stroke-dasharray="4,3"` +
+             ` class="tl-arrow" style="--tl-delay:${i * 60}ms"/>`;
     }
   }
 
+  /* ── Items ── */
+  items.forEach((item, i) => {
+    const cy = padTop + yPositions[i];
 
+    /* ── Entrée normale ── */
+    if (item.type === 'entry') {
+      const entry     = item.entry;
+      const ci        = actorKeys.indexOf(entry.actor || 'team');
+      const cx        = actorX[entry.actor || 'team'];
+      const et        = ETYPES[entry.etype || 'commentaire'] || {};
+      const color     = et.color || '#78909c';
+      const dateLabel = _tpFormatDateShort(entry.date);
+      const snippet   = _tpTruncate(entry.text || '', 26);
+      const isSubmit  = (entry.etype === 'soumission');
+      const isInGroup = !!item.inGroup;
+      const quality   = entry.quality || null;
+      const showQRing = entry.etype === 'reponse' && (entry.actor || 'team') === 'demandeur' && quality;
 
-  /* ── Points + labels ── */
-  sorted.forEach((entry, i) => {
-    const ci    = actorKeys.indexOf(entry.actor || 'team');
-    const cx    = actorX[entry.actor || 'team'];
-    const cy    = padTop + yPositions[i];
-    const et    = ETYPES[entry.etype || 'commentaire'] || {};
-    const color = et.color || '#78909c';
-    const dateLabel = _tpFormatDateShort(entry.date);
-    const snippet   = _tpTruncate(entry.text || '', 26);
-    const isSubmit  = (entry.etype === 'soumission');
+      svg += `<g class="tl-point-group${isInGroup ? ' tl-in-group' : ''}" style="--tl-delay:${i * 60}ms">`;
 
-    svg += `<g class="tl-point-group" style="--tl-delay:${i * 60}ms">`;
-
-    /* Halos */
-    svg += `<circle cx="${cx}" cy="${cy}" r="${dotR + 5}" fill="${color}" opacity="0.06" class="tl-halo"/>`;
-    svg += `<circle cx="${cx}" cy="${cy}" r="${dotR + 2.5}" fill="${color}" opacity="0.1"/>`;
-
-    /* Point */
-    svg += `<circle cx="${cx}" cy="${cy}" r="${dotR}" fill="${color}" filter="url(#tl-glow)"` +
-           ` style="cursor:pointer;stroke:var(--bg-surface);stroke-width:2"` +
-           ` class="tl-dot" data-tl-idx="${i}"/>`;
-
-    /* Anneau */
-    svg += `<circle cx="${cx}" cy="${cy}" r="${dotR - 2.5}" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"` +
-           ` style="pointer-events:none"/>`;
-
-    /* Emoji */
-    svg += `<text x="${cx}" y="${cy + 3.5}" text-anchor="middle" font-size="8" style="pointer-events:none">` +
-           `${et.emoji || '?'}</text>`;
-
-    /* ── Labels ── */
-    // Dernière colonne → labels vers la gauche ; autres → vers la droite
-    // Les labels pointent vers l'intérieur pour ne pas déborder du SVG
-    const isLast  = ci === actorKeys.length - 1;
-    const labelX  = isLast ? cx - dotR - 10 : cx + dotR + 10;
-    const anchor  = isLast ? 'end' : 'start';
-
-    if (isSubmit) {
-      // Soumission : juste le mot "Soumission"
-      svg += `<text x="${labelX}" y="${cy + 3}" text-anchor="${anchor}"` +
-             ` font-size="10" font-weight="600" fill="${color}" opacity="0.7"` +
-             ` style="pointer-events:none">${et.label}</text>`;
-    } else {
-      // Ligne 1 : date + type
-      svg += `<text x="${labelX}" y="${cy - 4}" text-anchor="${anchor}"` +
-             ` font-size="10" font-weight="700" fill="${color}" opacity="0.85"` +
-             ` style="pointer-events:none" font-family="JetBrains Mono,monospace">` +
-             `${dateLabel}` +
-             `<tspan fill="var(--text-secondary)" font-weight="500" font-size="10" dx="3">${et.label}</tspan>` +
-             `</text>`;
-
-      // Ligne 2 : snippet
-      if (snippet) {
-        svg += `<text x="${labelX}" y="${cy + 7}" text-anchor="${anchor}"` +
-               ` font-size="9" fill="var(--text-muted)" opacity="0.6"` +
-               ` style="pointer-events:none">${esc(snippet)}</text>`;
+      /* Barre latérale pour entrées dans un groupe étendu */
+      if (isInGroup) {
+        svg += `<rect x="0" y="${cy - 22}" width="3" height="44" fill="#78909c" opacity="0.2" rx="2"/>`;
       }
 
-    }
+      /* Anneau qualité (vert=complet, orange=incomplet) */
+      if (showQRing) {
+        const qColor = quality === 'complet' ? '#3FB950' : '#f59e42';
+        svg += `<circle cx="${cx}" cy="${cy}" r="${dotR + 4}" fill="none"` +
+               ` stroke="${qColor}" stroke-width="2.5" opacity="0.7" style="pointer-events:none"/>`;
+      }
 
-    svg += '</g>';
+      /* Halos */
+      svg += `<circle cx="${cx}" cy="${cy}" r="${dotR + 5}" fill="${color}" opacity="0.06" class="tl-halo"/>`;
+      svg += `<circle cx="${cx}" cy="${cy}" r="${dotR + 2.5}" fill="${color}" opacity="0.1"/>`;
+
+      /* Point */
+      svg += `<circle cx="${cx}" cy="${cy}" r="${dotR}" fill="${color}" filter="url(#tl-glow)"` +
+             ` style="cursor:pointer;stroke:var(--bg-surface);stroke-width:2"` +
+             ` class="tl-dot" data-tl-idx="${i}"/>`;
+
+      /* Anneau interne */
+      svg += `<circle cx="${cx}" cy="${cy}" r="${dotR - 2.5}" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"` +
+             ` style="pointer-events:none"/>`;
+
+      /* Emoji */
+      svg += `<text x="${cx}" y="${cy + 3.5}" text-anchor="middle" font-size="8" style="pointer-events:none">` +
+             `${et.emoji || '?'}</text>`;
+
+      /* Labels : dernière colonne → gauche, autres → droite (inward) */
+      const isLast = ci === actorKeys.length - 1;
+      const labelX = isLast ? cx - dotR - 10 : cx + dotR + 10;
+      const anchor = isLast ? 'end' : 'start';
+
+      if (isSubmit) {
+        svg += `<text x="${labelX}" y="${cy + 3}" text-anchor="${anchor}"` +
+               ` font-size="10" font-weight="600" fill="${color}" opacity="0.7"` +
+               ` style="pointer-events:none">${et.label}</text>`;
+      } else {
+        svg += `<text x="${labelX}" y="${cy - 4}" text-anchor="${anchor}"` +
+               ` font-size="10" font-weight="700" fill="${color}" opacity="0.85"` +
+               ` style="pointer-events:none" font-family="JetBrains Mono,monospace">` +
+               `${dateLabel}` +
+               `<tspan fill="var(--text-secondary)" font-weight="500" font-size="10" dx="3">${et.label}</tspan>` +
+               `</text>`;
+        if (snippet) {
+          svg += `<text x="${labelX}" y="${cy + 7}" text-anchor="${anchor}"` +
+                 ` font-size="9" fill="var(--text-muted)" opacity="0.6"` +
+                 ` style="pointer-events:none">${esc(snippet)}</text>`;
+        }
+      }
+
+      svg += '</g>';
+
+    /* ── Groupe réduit : bulle centrée cliquable ── */
+    } else if (item.type === 'group') {
+      const group     = item.group;
+      const cx        = centerX;
+      const pillW     = Math.min(totalW - 16, 180);
+      const pillX     = cx - pillW / 2;
+      const count     = group.entries.length;
+      const gid       = group.id;
+      const dStart    = _tpFormatDateShort(group.startDate);
+      const dEnd      = _tpFormatDateShort(group.endDate);
+      const dateRange = dStart === dEnd ? dStart : `${dStart} → ${dEnd}`;
+
+      svg += `<g class="tl-group-bubble" onclick="tpToggleGroup('${gid}')" style="cursor:pointer">`;
+      svg += `<title>${count} échange${count > 1 ? 's' : ''} — cliquer pour développer</title>`;
+      /* Fond pill */
+      svg += `<rect x="${pillX}" y="${cy - 18}" width="${pillW}" height="36" rx="18"` +
+             ` fill="#78909c" opacity="0.12"/>`;
+      svg += `<rect x="${pillX}" y="${cy - 18}" width="${pillW}" height="36" rx="18"` +
+             ` fill="none" stroke="#78909c" stroke-width="1.5" opacity="0.4" stroke-dasharray="4,3"/>`;
+      /* Icône */
+      svg += `<text x="${pillX + 22}" y="${cy + 5}" text-anchor="middle" font-size="15"` +
+             ` style="pointer-events:none">🔄</text>`;
+      /* Compteur + label */
+      svg += `<text x="${cx + 10}" y="${cy - 3}" text-anchor="middle" font-size="10" font-weight="700"` +
+             ` fill="var(--text-secondary)" style="pointer-events:none">` +
+             `${count} échange${count > 1 ? 's' : ''}</text>`;
+      /* Plage de dates */
+      svg += `<text x="${cx + 10}" y="${cy + 11}" text-anchor="middle" font-size="9"` +
+             ` fill="var(--text-muted)" opacity="0.8" style="pointer-events:none">` +
+             `${dateRange}</text>`;
+      svg += '</g>';
+
+    /* ── Bouton collapse centré ── */
+    } else if (item.type === 'group-collapse') {
+      const gid  = item.group.id;
+      const cx   = centerX;
+      const btnW = 90;
+      svg += `<g onclick="tpToggleGroup('${gid}')" style="cursor:pointer">`;
+      svg += `<rect x="${cx - btnW / 2}" y="${cy - 11}" width="${btnW}" height="22" rx="11"` +
+             ` fill="#78909c" opacity="0.08"/>`;
+      svg += `<rect x="${cx - btnW / 2}" y="${cy - 11}" width="${btnW}" height="22" rx="11"` +
+             ` fill="none" stroke="#78909c" stroke-width="1" opacity="0.3"/>`;
+      svg += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="9"` +
+             ` fill="var(--text-muted)" style="pointer-events:none">▲ Réduire</text>`;
+      svg += '</g>';
+    }
   });
 
   svg += '</svg>';
@@ -322,10 +497,13 @@ function tpRenderTimeline(entries) {
 
   /* ── Tooltip binding ── */
   wrap.querySelectorAll('.tl-dot').forEach(dot => {
-    const idx = parseInt(dot.getAttribute('data-tl-idx'), 10);
-    dot.addEventListener('mouseenter', e => tpShowTip(e, sorted[idx]));
-    dot.addEventListener('mousemove', tpMoveTip);
-    dot.addEventListener('mouseleave', tpHideTip);
+    const idx  = parseInt(dot.getAttribute('data-tl-idx'), 10);
+    const item = items[idx];
+    if (item && item.type === 'entry') {
+      dot.addEventListener('mouseenter', e => tpShowTip(e, item.entry));
+      dot.addEventListener('mousemove', tpMoveTip);
+      dot.addEventListener('mouseleave', tpHideTip);
+    }
   });
 }
 
@@ -341,12 +519,19 @@ function tpShowTip(e, entry) {
 
   const dateStr = entry.date ? _tpFormatDateShort(entry.date) : '';
 
+  /* Badge qualité dans le tooltip */
+  const qualityHtml = (entry.etype === 'reponse' && entry.actor === 'demandeur' && entry.quality)
+    ? `<div style="margin-top:3px;font-size:11px;color:${entry.quality === 'complet' ? '#3FB950' : '#f59e42'};font-weight:600">` +
+      `${entry.quality === 'complet' ? '✅ Complet' : '⚠️ Incomplet'}</div>`
+    : '';
+
   tip.innerHTML =
     '<div class="tp-tip-head">' +
       `<span class="tp-tip-emoji" style="background:${et.color}22;border:1px solid ${et.color}44">${et.emoji}</span>` +
       '<div class="tp-tip-head-text">' +
         `<div class="tp-tip-type" style="color:${et.color}">${et.label}</div>` +
         `<div class="tp-tip-actor"><span style="opacity:0.5">par</span> ${actor.emoji} ${actor.label}</div>` +
+        qualityHtml +
       '</div>' +
       (dateStr ? `<span class="tp-tip-date">${dateStr}</span>` : '') +
     '</div>' +
@@ -365,7 +550,7 @@ function tpMoveTip(e) {
   let y = e.clientY + pad;
 
   const rect = tip.getBoundingClientRect();
-  if (x + rect.width > window.innerWidth - 8) x = e.clientX - rect.width - pad;
+  if (x + rect.width  > window.innerWidth  - 8) x = e.clientX - rect.width  - pad;
   if (y + rect.height > window.innerHeight - 8) y = e.clientY - rect.height - pad;
 
   tip.style.left = x + 'px';
