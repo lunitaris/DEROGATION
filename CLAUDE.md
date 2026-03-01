@@ -445,10 +445,7 @@ Modal mot de passe (`modal-crypto.js`) :
 ---
 
 ## Améliorations futures possibles
-- Notification browser (API Notifications) pour les relances
-- Filtre combiné statut + next step dans la stats bar
 - UI de changement de mot de passe maître (appelle `StoreCrypto.changePassword()`, déjà implémenté)
 - Web Worker pour PBKDF2 (éviter le gel de l'UI ~2-4 s lors du déverrouillage)
 - Confirmation explicite avant import si des données existent déjà (actuellement géré par `confirm()` natif dans `importData()`)
-- Export CSV pour reporting
 - Boutons d'export contenu ticket pour permettre le copier coller dans ServiceNow (demander précisions pour cette feature)

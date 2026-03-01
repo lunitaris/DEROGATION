@@ -64,7 +64,7 @@ const ETYPES = {
   reponse:     { id: 'reponse',     label: 'Réponse',           emoji: '💬', color: '#f59e42', triggersStatus: 'analyse'    },
   validation:  { id: 'validation',  label: 'Validation',        emoji: '✅', color: '#66bb6a', triggersStatus: 'valide'     },
   escalade:     { id: 'escalade',     label: 'Review',         emoji: '⭐', color: '#ab47bc', triggersStatus: 'escalade'   },
-  final_review: { id: 'final_review', label: 'Final Review',   emoji: '⚖️', color: '#F1C40F', triggersStatus: null         },
+  final_review: { id: 'final_review', label: 'Final Review',   emoji: '💎', color: '#F1C40F', triggersStatus: null         },
   acceptation:  { id: 'acceptation',  label: 'Acceptation',    emoji: '🎉', color: '#66bb6a', triggersStatus: 'accepte'    },
   refus:       { id: 'refus',       label: 'Refus',             emoji: '❌', color: '#ef5350', triggersStatus: 'refuse'     },
   complement:  { id: 'complement',  label: 'Complément',        emoji: '📎', color: '#ffd54f', triggersStatus: null         },
