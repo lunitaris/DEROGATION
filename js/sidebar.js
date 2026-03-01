@@ -99,6 +99,7 @@ function renderSidebar(id) {
         <div class="action-log-header">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Suivi des actions
+          <button class="action-log-btn-add-header" onclick="addActionLogEntry('${id}')" title="Ajouter une entrée">+</button>
         </div>
         <div id="action-log-body" class="action-log-body"></div>
         <button class="action-log-more" id="action-log-more" onclick="toggleActionLog('${id}')" style="display:none"></button>
@@ -244,17 +245,6 @@ function renderSidebar(id) {
       </div>
     </div>
 
-    <div class="sidebar-divider"></div>
-
-    <!-- HISTORIQUE -->
-    <div class="sidebar-section">
-      <div class="section-label">Historique</div>
-      <div class="history-list">
-        ${sharedHistoryItems(d.history).map(({timestamp,dotSuffix,label,desc})=>
-          `<div class="history-item"><div class="history-dot${dotSuffix?' history-dot-'+dotSuffix:''}"></div><div style="flex:1"><div class="history-desc">${label}${desc?' — '+desc:''}</div><div class="history-time">${formatDate(timestamp)}</div></div></div>`
-        ).join('')}
-      </div>
-    </div>
   `;
 
   // Initialiser le journal d'actions
@@ -426,10 +416,13 @@ function renderActionLogSection(id) {
   } else {
     body.innerHTML = visibleSortedIdx.map(realIdx => {
       const entry = _actionLog[realIdx];
+      const actor = ACTORS[entry.actor || 'team'] || ACTORS.team;
+      const et    = ETYPES[entry.etype || 'commentaire'] || ETYPES.commentaire;
       return `<div class="action-log-row" data-real-idx="${realIdx}">
         <input type="date" class="action-log-date" value="${esc(entry.date||'')}" oninput="updateActionLogEntry('${id}', ${realIdx}, 'date', this.value)">
+        <span class="action-log-actor" title="${esc(actor.label)}" style="color:${actor.color}">${actor.emoji}</span>
+        <span class="action-log-etype" title="${esc(et.label)}" style="color:${et.color}">${et.emoji}</span>
         <input type="text" class="action-log-text" value="${esc(entry.text||'')}" placeholder="Action, décision, note…" oninput="updateActionLogEntry('${id}', ${realIdx}, 'text', this.value)">
-        <button class="action-log-btn-add" onclick="addActionLogEntry('${id}')" title="Ajouter une entrée">+</button>
         <button class="action-log-btn-remove" onclick="removeActionLogEntry('${id}', ${realIdx})" title="Supprimer cette ligne">×</button>
       </div>`;
     }).join('');

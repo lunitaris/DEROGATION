@@ -18,7 +18,7 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
 ├── css/
 │   ├── base.css            (variables CSS :root, thème light, reset)
 │   ├── layout.css          (topbar, today panel, stats, filter bar, sidebar layout, shortcuts)
-│   ├── components.css      (cartes, badges, action bloc, porteur, notes, quick-notes, historique)
+│   ├── components.css      (cartes, badges, porteur, notes, quick-notes, action log)
 │   ├── views.css           (vue pilotage, couleurs notes, modals, forms, animations, responsive)
 │   ├── ticket.css          (layout 2 panneaux plein écran, topbar ticket, bandeau identité, toast)
 │   └── timeline.css        (journal enrichi actor/etype, timeline SVG, tooltip — ticket.html only)
@@ -27,12 +27,12 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
     ├── store.js            (Store object — load/save/create/update/migrate/delete/prefs)
     ├── helpers.js          (formatDate, daysUntil, badges, esc, autoResizeTA, lastCheck*)
     ├── filters.js          (UI state, getFiltered, applyFilters, renderStats, renderCards, renderAll…)
-    ├── sidebar.js          (openSidebar, renderSidebar, quickUpdate, autosave, onActionStatusChange)
+    ├── sidebar.js          (openSidebar, renderSidebar, quickUpdate, autosave, renderActionLogSection)
     ├── pilotage.js         (renderPilotage, setPilotageSort — colonne ↗ plein écran)
     ├── modal-derog.js      (openNewModal, openEditModal, saveDerogation, confirmDelete, openModal…)
     ├── modal-email.js      (EMAIL_TEMPLATES, openEmailModal, copyEmail)
     ├── modal-crypto.js     (openCryptoModal, _submitCryptoModal — modal mot de passe partagé index+ticket)
-    ├── render-shared.js    (sharedHistoryItems, sharedRiskHtml, RISK_PARAMS_SIDEBAR, RISK_PARAMS_TICKET — partagé index+ticket)
+    ├── render-shared.js    (sharedRiskHtml, RISK_PARAMS_SIDEBAR, RISK_PARAMS_TICKET — partagé index+ticket ; sharedHistoryItems défini mais ⚠️ plus appelé nulle part)
     ├── app.js              (toggleTheme, exportData, importData, showDataError, openFullscreen, keydown, search, init, initCrypto)
     ├── ticket-actions.js   (tp_ — autosave & interactions pour ticket.html)
     ├── ticket-timeline.js  (tpRenderTimeline, tooltip SVG — ticket.html only)
@@ -117,7 +117,7 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 - `Store.create(fields)` → crée + sauvegarde
 - `Store.update(id, fields)` → met à jour + sauvegarde
 - `Store.updateNotesStructured(id, ns)` — sauvegarde autosave des notes
-- `Store.updateActionBloc(id, detail, dueDate, motif)` — sauvegarde autosave action bloc (motif optionnel)
+- `Store.updateActionBloc(id, detail, dueDate, motif)` — ⚠️ **plus appelé depuis l'UI** (Next Steps supprimé) ; méthode conservée dans store.js
 - `Store.updateNotes(id, text)` — sauvegarde autosave notes libres (champ `notes`)
 - `Store.updateMeetingNotes(id, text)` — sauvegarde autosave notes réunion (champ `meetingNotes`)
 - `Store.updateActionLog(id, log)` — sauvegarde autosave journal d'actions (champ `actionLog`)
@@ -145,13 +145,13 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 
 ## Constantes importantes
 
-### ACTORS (journal d'actions — ticket.html uniquement)
+### ACTORS (journal d'actions — index.html et ticket.html)
 | Clé | Libellé | Emoji | Couleur |
 |-----|---------|-------|---------|
 | `demandeur` | Demandeur | 👤 | `#42a5f5` (bleu) |
 | `team` | Team Dérog | 🛡 | `#4caf50` (vert) |
 
-### ETYPES (types d'événements journal — ticket.html uniquement)
+### ETYPES (types d'événements journal — index.html et ticket.html)
 10 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` ⚖️ (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
 Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (clé STATUSES ou null).
 ⚠️ L'etype `escalade` conserve son `id: 'escalade'` pour la compat des données existantes ; son label est "Review" et son emoji ⭐.
@@ -215,7 +215,7 @@ VUE TABLE — colonnes :
   Ticket · Titre · Porteur · Statut SN · Next step · Motif · Expiration
 
 VUE PILOTAGE — tableau dense :
-  ↗ · Ticket · Titre · Porteur · Statut · Next step · Motif · Dernière action / Contexte ·
+  ↗ · Ticket · Titre · Porteur · Statut · Dernière action journal (emoji + texte 50c) ·
   Dossier (pips) · Dernière vérif. (inline éditable) · Prochaine relance
   Bouton ↗ et clic molette → ouvre ticket.html en nouvel onglet
 
@@ -224,29 +224,24 @@ VUE TICKET PLEIN ÉCRAN (ticket.html?id=…)
   Bandeau identité fixe : badges statut/action/motif · porteur · asset · expiration · risk chips
   Panneau gauche (390px, scroll indépendant) — ordre exact :
     1. Profil de risque — EDR, Internet, REMA, DIC
-    2. Next Steps — select actionStatus, select motif (conditionnel), textarea detail, date échéance
-    3. Préparation réunion (fond orange) — affiché si meetingNotes non vide, bouton ✕ Effacer
-    4. Notes libres (fond jaune post-it) — textarea libre, autosave 800ms
+    2. Préparation réunion (fond orange) — affiché si meetingNotes non vide, bouton ✕ Effacer
+    3. Notes libres (fond jaune post-it) — textarea libre, autosave 800ms
   Panneau droit (flex:1, scroll indépendant) — ordre exact :
     1. Cycle de vie — dates + dernière action journal (acteur + type + texte tronqué 80c) + bouton "Vérifier maintenant"
     2. #tp-dossier-row (flex row) :
        ├── Dossier (flex:1) — 6 sections ouvertes par défaut, couleurs sémantiques, checkbox OK, barre progression
        └── Timeline SVG (340px, sticky) — colonnes par acteur, points bezier, tooltip au survol
-    3. Journal d'actions — formulaire enrichi (acteur + type + date + message) ; entrées triées chrono ↑ ; [×] supprimer par ligne
-    4. Historique — événements auto (creation, status_changed, action_changed)
+    3. Journal d'actions — formulaire enrichi (date + acteur + type + message) ; entrées triées ↓ (plus récent en haut) ; [×] supprimer par ligne
 
 DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   ├── Hero (titre, badge urgence, statut SN, ticket ID, bouton 📋 Réunion)
   ├── Porteur + Asset
   ├── Statut ServiceNow (select inline)
-  ├── Journal (fond gris) — lignes DATE + texte, triées chrono ↑
-  │     4 plus récentes par défaut, expand/collapse ; bouton [+] / [×] par ligne
+  ├── Journal (fond gris) — lignes : date | actor-emoji | etype-emoji | texte, triées chrono ↑
+  │     [+] dans le header du bloc ; 4 plus récentes par défaut, expand/collapse ; [×] par ligne
   │     autosave debounce 800ms → champ `actionLog`
-  ├── Next steps :
-  │     select Qui doit agir → onActionStatusChange()
-  │     select Motif (conditionnel, visible si attente_demandeur)
-  │     textarea Dernière action / Contexte — autosave 800ms
-  │     date Date prévisionnelle — autosave 800ms
+  ├── Dernière action journal (carte résumé, sous le journal interactif)
+  │     affiche la plus récente : actor + etype + texte tronqué 100c
   ├── Préparation réunion (fond orange, masqué par défaut)
   │     affiché si meetingNotes non vide OU si bouton cliqué ; indicateur ● orange si contenu présent
   │     bouton "✕ Effacer" vide et masque → champ `meetingNotes`
@@ -254,8 +249,7 @@ DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   ├── Profil de risque (EDR, Internet, REMA, DIC)
   ├── Cycle de vie (dates + lastCheckedAt + bouton "Vérifier maintenant")
   ├── Dossier (6 sections notes structurées) — autosave 1200ms, checkbox par section
-  ├── Actions rapides (emails, modifier, supprimer)
-  └── Historique
+  └── Actions rapides (emails, modifier, supprimer)
 
 MODAL new/edit — tous les champs
   ↳ Motif conditionnel : visible si f-actionStatus = attente_demandeur (onchange inline)
@@ -284,13 +278,11 @@ MODAL confirm — suppression
 ---
 
 ## Helpers UI importants
-- `actionBadge(actionStatus)` — badge coloré Next step
+- `actionBadge(actionStatus)` — badge coloré Next step (cartes + table uniquement)
 - `motifBadge(d)` — badge orange motif (carte uniquement, si attente_demandeur + motif)
-- `motifCell(d)` — idem pour table/pilotage (affiche `—` si vide)
+- `motifCell(d)` — idem pour table (affiche `—` si vide)
 - `waitingBadge(d)` — badge gris "⏳ En attente (OK)" si attente_demandeur + dueDate future — ⚠️ **non utilisé** dans aucune vue, ne pas appeler dans du nouveau code
 - `statusBadge(status)` — badge statut SN
-- `onActionStatusChange(id, val)` — change actionStatus + affiche/masque #motif-row + reset motif si besoin
-- `scheduleActionSave(id)` — debounce 800ms, lit detail + dueDate + motif
 - `autoResizeTA(el)` — `el.style.height='auto'; el.style.height=el.scrollHeight+'px'` ; toujours appeler via `requestAnimationFrame` après un `innerHTML=` ; nécessite `resize:none; overflow-y:hidden` sur la textarea
 
 ---
@@ -333,13 +325,11 @@ Règles implicites à respecter dans **tout** nouveau code :
 - Colonne ↗ dans la vue Pilotage
 
 ### Fonctions dans render-shared.js (partagées sidebar ↔ ticket)
-- `sharedHistoryItems(history)` → `[{ timestamp, event, dotSuffix, label, desc }]` — transforme `d.history[]` en items enrichis (reverse chronologique). `dotSuffix` est court (`created/status/action`) pour les classes CSS sidebar ; `event` est la clé brute pour les classes ticket.
 - `sharedRiskHtml(risk, params)` → HTML du profil de risque paramétré par classes CSS. Paramètres prédéfinis : `RISK_PARAMS_SIDEBAR` (classes `info-grid/info-item/chip`) et `RISK_PARAMS_TICKET` (classes `tp-risk-grid/tp-risk-row/tp-risk-val`).
 - `RISK_PARAMS_SIDEBAR` / `RISK_PARAMS_TICKET` — constantes de config CSS pour chaque contexte.
+- `sharedHistoryItems(history)` — ⚠️ **plus appelé nulle part** (historique automatique supprimé de sidebar et ticket) ; conservé dans le fichier mais orphelin.
 
 ### Fonctions dans ticket-actions.js (préfixe `tp_`)
-- `tpOnActionStatusChange(val)` — change l'actionStatus, sauvegarde immédiate, masque/affiche motif
-- `tpScheduleActionSave()` — debounce 800ms, lit detail + dueDate + motif → `Store.updateActionBloc`
 - `tpClearMeetingNotes()` — vide + masque l'encart réunion
 - `tpScheduleMeetingNotesSave()` — debounce 800ms → `Store.updateMeetingNotes`
 - `tpScheduleNotesSave()` — debounce 800ms → `Store.updateNotes`
@@ -349,7 +339,7 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `tpRemoveJournalEntry(realIdx)` / `tpUpdateJournal(realIdx, field, val)`
 - `tpSaveJournal()` — `Store.updateActionLog`, synchrone
 - `tpRenderJournal()` — re-render du journal (tri chronologique, sans recréer le shell) + appelle `tpRenderTimeline(tp_journal)`
-- `_tpSortedJournalIndices()` — retourne les indices de `tp_journal` triés par date ↑ (sans date → fin)
+- `_tpSortedJournalIndices()` — retourne les indices de `tp_journal` triés par date **↓** (plus récent en haut — `db.localeCompare(da)`) ; sans date → fin
 - `tpToggleNoteBlock(key)` — expand/collapse section dossier
 - `tpScheduleDossierSave(key)` — debounce 1200ms → `Store.updateNotesStructured`
 - `tpToggleNoteCheck(key)` — toggle checkbox OK section dossier
@@ -369,10 +359,10 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `_loadTicketById()` — lit ?id=, initialise `tp_journal`, écoute `storage` + `focus` (closure sur `id`)
 - `renderTicketPage(d)` — appelle tous les render* + redimensionne les textareas ; **`renderTimelineSection()` doit être appelé avant `renderJournalShell()`** (crée #tp-timeline-wrap avant que tpRenderJournal() le peuple)
 - `renderTopbar(d)`, `renderIdentityStrip(d)`
-- `renderRiskProfile(d)`, `renderNextSteps(d)`, `renderMeetingNotes(d)`, `renderQuickNotes(d)`
+- `renderRiskProfile(d)`, `renderMeetingNotes(d)`, `renderQuickNotes(d)`
 - `renderTimelineSection()` — crée `#tp-timeline-wrap` dans `#tp-timeline`
 - `renderJournalShell(d)` + `tpRenderJournal()` (séparé pour re-render sans recréer le shell)
-- `renderDossier(d)`, `renderLifecycle(d)` (inclut dernière entrée `actionLog` triée desc par date), `renderAutoHistory(d)`
+- `renderDossier(d)`, `renderLifecycle(d)` (inclut dernière entrée `actionLog` triée desc par date)
 
 ### Synchronisation inter-onglets
 Deux mécanismes dans `_loadTicketById` :
@@ -380,12 +370,12 @@ Deux mécanismes dans `_loadTicketById` :
 2. `window.addEventListener('focus', ...)` — re-render quand ticket.html reprend le focus **(compensate pour la peu fiabilité des storage events en `file://`)**
 
 ### Journal d'actions — tri chronologique
-- Les entrées sont **toujours affichées triées par date croissante** (plus ancien → plus récent)
-- Les entrées **sans date** apparaissent en fin de liste
+- **Ticket plein écran** : tri **décroissant** — `_tpSortedJournalIndices()` → `db.localeCompare(da)` (plus récent en haut)
+- **Sidebar** : tri **croissant** — `_sortedActionLogIndices()` → `da.localeCompare(db)` (les 4 plus récentes = fin de liste, collapse = tranche finale)
+- Les entrées **sans date** apparaissent en fin de liste dans les deux cas
 - Le tableau `tp_journal` (plein écran) et `_actionLog` (sidebar) conservent l'ordre d'insertion ; seul le rendu est trié
-- Technique : `_tpSortedJournalIndices()` / `_sortedActionLogIndices()` retournent un tableau d'indices triés ; chaque ligne DOM reçoit `data-real-idx="${realIdx}"` ; tous les onclick passent le vrai index du tableau
+- Technique : chaque ligne DOM reçoit `data-real-idx="${realIdx}"` ; tous les onclick passent le vrai index du tableau
 - Quand une date est modifiée (`onchange`), `tpRenderJournal()` est appelé pour re-trier
-- En sidebar : collapse = 4 entrées les plus récentes (fin du tri ↑) ; expand via bouton
 
 ---
 
