@@ -45,20 +45,6 @@ function tpOpenEdit() {
 /* ================================================================
    MEETING NOTES
 ================================================================ */
-function tpToggleMeetingNotes() {
-  const section = document.getElementById('tp-meeting-notes');
-  if (!section) return;
-  const isHidden = section.style.display === 'none' || section.style.display === '';
-  section.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    const ta = section.querySelector('.tp-meeting-ta');
-    if (ta) {
-      ta.focus();
-      requestAnimationFrame(() => autoResizeTA(ta));
-    }
-  }
-}
-
 function tpClearMeetingNotes() {
   if (!tp_currentId) return;
   const ta = document.querySelector('.tp-meeting-ta');
@@ -331,17 +317,6 @@ function tpCopyEmail(type) {
   const d = Store._migrateDerog({ ...Store.getById(tp_currentId) });
   if (!d) return;
 
-  /* Réutilise EMAIL_TEMPLATES depuis modal-email.js si disponible */
-  if (typeof EMAIL_TEMPLATES !== 'undefined' && EMAIL_TEMPLATES[type]) {
-    const tpl = EMAIL_TEMPLATES[type];
-    const subject = tpl.subject(d);
-    const body    = tpl.body(d);
-    const full    = `Objet : ${subject}\n\n${body}`;
-    tpCopyToClipboard(full, `Email « ${tpl.label} » copié !`);
-    return;
-  }
-
-  /* Fallback minimal si EMAIL_TEMPLATES pas chargé */
   const ticket  = d.ticketId || '(sans ticket)';
   const title   = d.title || '(sans titre)';
   const expires = d.dates?.expiresAt ? formatDate(d.dates.expiresAt) : 'non définie';

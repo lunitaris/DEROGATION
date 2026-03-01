@@ -11,7 +11,7 @@ let notesSaveTimer = null;
 let quickNotesSaveTimer = null;
 let meetingNotesSaveTimer = null;
 let actionLogSaveTimer = null;
-let filters = { status: '', action: '', urgency: '', expiry: '', search: '' };
+let filters = { status: '', action: '', expiry: '', search: '' };
 let sortKey = 'updatedAt';
 
 /* FILTER & SORT */
@@ -43,14 +43,13 @@ function getFiltered() {
 function applyFilters() {
   filters.status = document.getElementById('filter-status').value;
   filters.action = document.getElementById('filter-action').value;
-  filters.urgency = '';
   filters.expiry = document.getElementById('filter-expiry').value;
   sortKey = document.getElementById('sort-select').value;
   updateFilterBarState();
   renderAll();
 }
 function clearFilters() {
-  filters = { status:'',action:'',urgency:'',expiry:'',search:'' };
+  filters = { status:'',action:'',expiry:'',search:'' };
   ['filter-status','filter-action','filter-expiry'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('search-input').value='';
   updateFilterBarState();

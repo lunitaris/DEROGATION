@@ -1,7 +1,7 @@
 /* ================================================================
    TICKET-TIMELINE.JS  v3.3 — Timeline visuelle SVG
    Préfixe tp_ pour tout (conventions ticket.html)
-   Dépendances : constants.js (ACTORS, ETYPES, STATUSES), helpers.js (esc)
+   Dépendances : constants.js (ACTORS, ETYPES), helpers.js (esc)
 ================================================================ */
 
 let _tpTipEl = null;
@@ -33,7 +33,6 @@ function _tpBallInCourt(entry) {
 
   switch (etype) {
     case 'soumission':      return 'team';
-    case 'analyse':         return 'team';
 
     case 'demande_info':
     case 'question':        // ← alias

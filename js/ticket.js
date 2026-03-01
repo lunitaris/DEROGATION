@@ -181,19 +181,6 @@ function renderMeetingNotes(d) {
     </div>`;
 }
 
-/* Bouton d'activation dans la topbar des notes ou via raccourci */
-function tpShowMeetingNotes() {
-  const section = document.getElementById('tp-meeting-notes');
-  if (!section) return;
-  section.style.display = 'block';
-  const pane = document.getElementById('tp-left-pane');
-  if (pane) pane.style.display = 'flex';
-  const ta = section.querySelector('.tp-meeting-ta');
-  if (ta) {
-    ta.focus();
-    requestAnimationFrame(() => autoResizeTA(ta));
-  }
-}
 
 /* ================================================================
    NOTES LIBRES (cadre supérieur) — fond jaune post-it

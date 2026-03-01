@@ -24,19 +24,6 @@ function renderPilotage(list) {
     const arrow = active ? (pilotageSortAsc ? '↑' : '↓') : '↕';
     return `<th class="${active?'sorted':''}" onclick="setPilotageSort('${key}')" ${extra}>${label} <span class="sort-arrow">${arrow}</span></th>`;
   }
-  function dueBadge(iso) {
-    if (!iso) return '<span class="due-ok">—</span>';
-    const d = daysUntil(iso);
-    if (d < 0) return `<span class="due-late" title="${formatDate(iso)}">J+${Math.abs(d)}</span>`;
-    if (d <= 5) return `<span class="due-soon" title="${formatDate(iso)}">J-${d}</span>`;
-    return `<span class="due-ok" title="${formatDate(iso)}">${formatDate(iso).slice(0,5)}</span>`;
-  }
-  function lastCheckCell(iso) {
-    if (!iso) return '<span class="last-check-none">—</span>';
-    const days = Math.floor((new Date() - new Date(iso)) / 86400000);
-    const label = days === 0 ? "auj." : days === 1 ? "hier" : `J+${days}`;
-    return `<span class="${lastCheckClass(iso)}" title="${formatDate(iso)}">${label}</span>`;
-  }
   function completudeCell(d) {
     const ns = d.notesStructured || {};
     const chk = ns.checks || {};
@@ -48,15 +35,6 @@ function renderPilotage(list) {
     }).join('');
     return `<div class="completude-bar">${pips}</div>`;
   }
-  function expiryShort(iso) {
-    if (!iso) return '<span class="due-ok">—</span>';
-    const d = daysUntil(iso);
-    const cls = expiryClass(d);
-    if (d < 0) return `<span class="${cls}" title="${formatDate(iso)}">Exp.</span>`;
-    if (d === 0) return `<span class="${cls}" title="${formatDate(iso)}">Auj.</span>`;
-    return `<span class="${cls}" title="${formatDate(iso)}">J-${d}</span>`;
-  }
-
   const rows = sorted.map(d => {
     /* Dernière entrée du journal (la plus récente par date) */
     const actionLog = d.actionLog || [];

@@ -38,7 +38,6 @@ const MOTIF_LABELS = [
 ];
 
 const DIC_LABELS = ['', 'Faible', 'Moyen', 'Élevé', 'Critique'];
-const DIC_UNKNOWN = 0; // valeur sentinelle = "non renseigné"
 
 // Sections du bloc notes structuré
 const NOTES_SECTIONS = [
@@ -51,7 +50,7 @@ const NOTES_SECTIONS = [
 ];
 
 /* ================================================================
-   TIMELINE — Acteurs, types d'événements, statuts workflow
+   TIMELINE — Acteurs et types d'événements
 ================================================================ */
 const ACTORS = {
   demandeur: { id: 'demandeur', label: 'Demandeur',   emoji: '👤', color: '#42a5f5' },
@@ -71,13 +70,4 @@ const ETYPES = {
   commentaire: { id: 'commentaire', label: 'Commentaire',       emoji: '💡', color: '#78909c', triggersStatus: null         }
 };
 
-const STATUSES = {
-  brouillon:  { id: 'brouillon',  label: 'Brouillon',      emoji: '📝', color: '#78909c' },
-  soumis:     { id: 'soumis',     label: 'Soumis',         emoji: '📤', color: '#42a5f5' },
-  en_attente: { id: 'en_attente', label: 'En attente',     emoji: '⏳', color: '#ffd54f' },
-  analyse:    { id: 'analyse',    label: 'En analyse',     emoji: '🔎', color: '#29b6f6' },
-  valide:     { id: 'valide',     label: 'Validé équipe',  emoji: '✔',  color: '#ab47bc' },
-  escalade:   { id: 'escalade',   label: 'Escaladé',       emoji: '🚀', color: '#ff7043' },
-  accepte:    { id: 'accepte',    label: 'Accepté',        emoji: '🎉', color: '#66bb6a' },
-  refuse:     { id: 'refuse',     label: 'Refusé',         emoji: '❌', color: '#ef5350' }
-};
+

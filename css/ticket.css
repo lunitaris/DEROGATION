@@ -471,30 +471,6 @@ body {
 .tp-notes-hint.visible { opacity: 1; }
 
 /* ================================================================
-   PROFIL DE RISQUE (panneau gauche)
-================================================================ */
-.tp-risk-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.tp-risk-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-}
-.tp-risk-label { color: var(--text-muted); }
-.tp-risk-val { font-weight: 600; color: var(--text-primary); }
-.tp-risk-val.ok { color: var(--status-validated-text); }
-.tp-risk-val.warn { color: var(--urgency-p1); }
-.tp-dic-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-/* ================================================================
    JOURNAL D'ACTIONS (panneau droit) — fond gris, police réduite
 ================================================================ */
 #tp-journal .tp-section {

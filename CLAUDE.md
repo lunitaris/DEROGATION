@@ -18,12 +18,12 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
 ├── css/
 │   ├── base.css            (variables CSS :root, thème light, reset)
 │   ├── layout.css          (topbar, today panel, stats, filter bar, sidebar layout, shortcuts)
-│   ├── components.css      (cartes, badges, porteur, notes, quick-notes, action log)
+│   ├── components.css      (cartes, badges, notes, quick-notes, action log, indicateurs)
 │   ├── views.css           (vue pilotage, couleurs notes, modals, forms, animations, responsive)
 │   ├── ticket.css          (layout 2 panneaux plein écran, topbar ticket, bandeau identité, toast)
 │   └── timeline.css        (journal enrichi actor/etype, timeline SVG, tooltip — ticket.html only)
 └── js/
-    ├── constants.js        (STATUS_LABELS, ACTION_LABELS, MOTIF_LABELS, NOTES_SECTIONS, DIC_LABELS, ACTORS, ETYPES, STATUSES)
+    ├── constants.js        (STATUS_LABELS, ACTION_LABELS, MOTIF_LABELS, NOTES_SECTIONS, DIC_LABELS, ACTORS, ETYPES)
     ├── store.js            (Store object — load/save/create/update/migrate/delete/prefs)
     ├── helpers.js          (formatDate, daysUntil, badges, esc, autoResizeTA, lastCheck*)
     ├── filters.js          (UI state, getFiltered, applyFilters, renderStats, renderCards, renderAll…)
@@ -32,7 +32,7 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
     ├── modal-derog.js      (openNewModal, openEditModal, saveDerogation, confirmDelete, openModal…)
     ├── modal-email.js      (EMAIL_TEMPLATES, openEmailModal, copyEmail)
     ├── modal-crypto.js     (openCryptoModal, _submitCryptoModal — modal mot de passe partagé index+ticket)
-    ├── render-shared.js    (sharedRiskHtml, RISK_PARAMS_SIDEBAR, RISK_PARAMS_TICKET — partagé index+ticket ; sharedHistoryItems défini mais ⚠️ plus appelé nulle part)
+    ├── render-shared.js    (sharedIndicatorsHtml — partagé index+ticket)
     ├── app.js              (toggleTheme, exportData, importData, showDataError, openFullscreen, keydown, search, init, initCrypto)
     ├── ticket-actions.js   (tp_ — autosave & interactions pour ticket.html)
     ├── ticket-timeline.js  (tpRenderTimeline, tooltip SVG — ticket.html only)
@@ -67,8 +67,8 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
     "asset": "Infra prod Zone B",
     "status": "new | en_revue | validated | expired",
     "actionStatus": "a_faire | attente_demandeur | reunion_prevue | suivi_date | attente_validation | termine",
-    "actionDetail": "texte libre — dernière action / contexte",
-    "actionDueDate": "ISO date ou null",
+    "actionDetail": "texte libre — champ legacy, plus affiché dans l'UI",
+    "actionDueDate": "ISO date ou null — champ legacy, plus affiché dans l'UI",
     "actionMotif": "string ou null  ← visible seulement si actionStatus = attente_demandeur",
     "risk": {
       "edrInstalled": false,
@@ -117,7 +117,6 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 - `Store.create(fields)` → crée + sauvegarde
 - `Store.update(id, fields)` → met à jour + sauvegarde
 - `Store.updateNotesStructured(id, ns)` — sauvegarde autosave des notes
-- `Store.updateActionBloc(id, detail, dueDate, motif)` — ⚠️ **plus appelé depuis l'UI** (Next Steps supprimé) ; méthode conservée dans store.js
 - `Store.updateNotes(id, text)` — sauvegarde autosave notes libres (champ `notes`)
 - `Store.updateMeetingNotes(id, text)` — sauvegarde autosave notes réunion (champ `meetingNotes`)
 - `Store.updateActionLog(id, log)` — sauvegarde autosave journal d'actions (champ `actionLog`)
@@ -129,7 +128,7 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 - `Store._silentSave(data)` → sauvegarde interne (chiffrée si actif) sans event — utilisée par tous les `updateXxx()`
 - `Store._loadError` → `null` si le dernier `load()` a réussi ; `{ message, snippet }` si JSON.parse a échoué (données corrompues). Affiché dans `#data-error-banner` par `renderAll()`. Se réinitialise à `null` à chaque `load()` réussi.
 
-> **Convention autosave "silencieux"** : `updateNotes`, `updateNotesStructured`, `updateActionBloc`, `updateActionLog` passent par `_silentSave()` — chiffre automatiquement si StoreCrypto actif, **sans** déclencher de re-render ni d'événement. Ne jamais appeler `renderAll()` depuis ces chemins. Ne jamais écrire `localStorage.setItem(Store.KEY, ...)` directement.
+> **Convention autosave "silencieux"** : `updateNotes`, `updateNotesStructured`, `updateActionLog` passent par `_silentSave()` — chiffre automatiquement si StoreCrypto actif, **sans** déclencher de re-render ni d'événement. Ne jamais appeler `renderAll()` depuis ces chemins. Ne jamais écrire `localStorage.setItem(Store.KEY, ...)` directement.
 
 ### Zones de texte par dérogation (récapitulatif)
 4 champs texte distincts, comportements différents :
@@ -152,14 +151,10 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 | `team` | Team Dérog | 🛡 | `#4caf50` (vert) |
 
 ### ETYPES (types d'événements journal — index.html et ticket.html)
-10 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` ⚖️ (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
-Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (clé STATUSES ou null).
+10 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` 💎 (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
+Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (string d'état ou null).
 ⚠️ L'etype `escalade` conserve son `id: 'escalade'` pour la compat des données existantes ; son label est "Review" et son emoji ⭐.
 `final_review` : `triggersStatus: null`, couleur `#F1C40F` (ambre/or) — déclenche un segment ambre dans la timeline jusqu'au prochain changement d'état.
-
-### STATUSES (workflow interne dérogation — ticket.html uniquement)
-8 états : `brouillon` · `soumis` · `en_attente` · `analyse` · `valide` · `escalade` · `accepte` · `refuse`
-⚠️ Ces états ne sont **pas stockés** dans le data model. Ils sont **déduits** à l'affichage : chaque entrée du journal (`ETYPES`) possède un champ `triggersStatus` (clé STATUSES ou `null`) qui permet à la timeline SVG de colorier les points selon le dernier état atteint. Aucun champ `workflowStatus` n'existe dans la dérogation.
 
 ### STATUS_LABELS (status)
 | Clé | Libellé | Couleur |
@@ -222,16 +217,18 @@ VUE PILOTAGE — tableau dense :
 VUE TICKET PLEIN ÉCRAN (ticket.html?id=…)
   Topbar fixe : ← retour · breadcrumb · 3 boutons email (copie presse-papiers) · Modifier · Thème · Supprimer
   Bandeau identité fixe : badges statut/action/motif · porteur · asset · expiration · risk chips
+  Cadre supérieur fusionné (tp-summary-inner) — 3 colonnes côte à côte :
+    1. Profil de risque (185px) — grille indicateurs (Mitigations, Plan d'action, Exposé internet, DIC)
+    2. Notes libres (flex:1, fond jaune) — textarea autosave 800ms
+    3. Cycle de vie (270px) — dates + dernière action journal + bouton "Vérifier maintenant"
   Panneau gauche (390px, scroll indépendant) — ordre exact :
-    1. Profil de risque — EDR, Internet, REMA, DIC
-    2. Préparation réunion (fond orange) — affiché si meetingNotes non vide, bouton ✕ Effacer
-    3. Notes libres (fond jaune post-it) — textarea libre, autosave 800ms
+    1. Préparation réunion (fond orange) — affiché si meetingNotes non vide, bouton ✕ Effacer
+    2. (autres sections futures éventuelles)
   Panneau droit (flex:1, scroll indépendant) — ordre exact :
-    1. Cycle de vie — dates + dernière action journal (acteur + type + texte tronqué 80c) + bouton "Vérifier maintenant"
-    2. #tp-dossier-row (flex row) :
+    1. #tp-dossier-row (flex row) :
        ├── Dossier (flex:1) — 6 sections ouvertes par défaut, couleurs sémantiques, checkbox OK, barre progression
        └── Timeline SVG (340px, sticky) — colonnes par acteur, points bezier, tooltip au survol
-    3. Journal d'actions — formulaire enrichi (date + acteur + type + message) ; entrées triées ↓ (plus récent en haut) ; [×] supprimer par ligne
+    2. Journal d'actions — formulaire enrichi (date + acteur + type + message) ; entrées triées ↓ (plus récent en haut) ; [×] supprimer par ligne
 
 DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   ├── Hero (titre, badge urgence, statut SN, ticket ID, bouton 📋 Réunion)
@@ -246,7 +243,7 @@ DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   │     affiché si meetingNotes non vide OU si bouton cliqué ; indicateur ● orange si contenu présent
   │     bouton "✕ Effacer" vide et masque → champ `meetingNotes`
   ├── Notes (fond jaune post-it) — textarea libre, autosave 800ms → champ `notes`
-  ├── Profil de risque (EDR, Internet, REMA, DIC)
+  ├── Profil de risque (indicateurs : Mitigations, Plan d'action, Exposé internet, DIC)
   ├── Cycle de vie (dates + lastCheckedAt + bouton "Vérifier maintenant")
   ├── Dossier (6 sections notes structurées) — autosave 1200ms, checkbox par section
   └── Actions rapides (emails, modifier, supprimer)
@@ -281,7 +278,6 @@ MODAL confirm — suppression
 - `actionBadge(actionStatus)` — badge coloré Next step (cartes + table uniquement)
 - `motifBadge(d)` — badge orange motif (carte uniquement, si attente_demandeur + motif)
 - `motifCell(d)` — idem pour table (affiche `—` si vide)
-- `waitingBadge(d)` — badge gris "⏳ En attente (OK)" si attente_demandeur + dueDate future — ⚠️ **non utilisé** dans aucune vue, ne pas appeler dans du nouveau code
 - `statusBadge(status)` — badge statut SN
 - `autoResizeTA(el)` — `el.style.height='auto'; el.style.height=el.scrollHeight+'px'` ; toujours appeler via `requestAnimationFrame` après un `innerHTML=` ; nécessite `resize:none; overflow-y:hidden` sur la textarea
 
@@ -325,9 +321,7 @@ Règles implicites à respecter dans **tout** nouveau code :
 - Colonne ↗ dans la vue Pilotage
 
 ### Fonctions dans render-shared.js (partagées sidebar ↔ ticket)
-- `sharedRiskHtml(risk, params)` → HTML du profil de risque paramétré par classes CSS. Paramètres prédéfinis : `RISK_PARAMS_SIDEBAR` (classes `info-grid/info-item/chip`) et `RISK_PARAMS_TICKET` (classes `tp-risk-grid/tp-risk-row/tp-risk-val`).
-- `RISK_PARAMS_SIDEBAR` / `RISK_PARAMS_TICKET` — constantes de config CSS pour chaque contexte.
-- `sharedHistoryItems(history)` — ⚠️ **plus appelé nulle part** (historique automatique supprimé de sidebar et ticket) ; conservé dans le fichier mais orphelin.
+- `sharedIndicatorsHtml(risk, ns)` → HTML du bloc Indicateurs (Mitigations, Plan d'action, Exposé internet, DIC). Classes CSS générées : `risk-ind-list`, `risk-ind-row`, `risk-ind-label`, `risk-ind-yes`, `risk-ind-no`, `risk-ind-na`, `risk-ind-warn`. Appelée depuis `renderRiskProfile()` (ticket.js) et `renderSidebar()` (sidebar.js).
 
 ### Fonctions dans ticket-actions.js (préfixe `tp_`)
 - `tpClearMeetingNotes()` — vide + masque l'encart réunion
@@ -345,11 +339,11 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `tpToggleNoteCheck(key)` — toggle checkbox OK section dossier
 - `tpMarkCheckedNow()` — `Store.update({lastCheckedAt: now})`
 - `tpConfirmDelete()` — dialog confirm → `Store.delete` → `window.location.href='index.html'`
-- `tpCopyEmail(type)` — copie email dans presse-papiers (types: info, status, expiry)
+- `tpCopyEmail(type)` — copie email dans presse-papiers (types: info, status, expiry) — implémentation locale dans ticket-actions.js (modal-email.js n'est pas chargé dans ticket.html)
 - `tpShowToast(msg)` — toast 2.5s en bas de page
 
 ### Fonctions dans ticket-timeline.js
-- `tpRenderTimeline(entries)` — cible `#tp-timeline-wrap` ; SVG 2 colonnes (120px/col) × acteur, points bezier ; flèches bezier cubique (couleur acteur source, marqueur chevron ouvert, endpoint = `y2-dotR-2`) ; ball-in-court : ambre `#F1C40F` si etype `final_review` (Final Review), orange `#f59e42` si etype `escalade` (Review), bleu `#42a5f5` si ball sur demandeur, rouge `#e53935` si ball sur team ; sous-statuts ❌/⏳ supprimés du SVG et du tooltip ; attache tooltip aux `.tl-dot`
+- `tpRenderTimeline(entries)` — cible `#tp-timeline-wrap` ; SVG 2 colonnes (120px/col) × acteur, points bezier ; flèches bezier cubique (couleur acteur source, marqueur chevron ouvert, endpoint = `y2-dotR-2`) ; ball-in-court : ambre `#F1C40F` si etype `final_review` (Final Review), orange `#f59e42` si etype `escalade` (Review), bleu `#42a5f5` si ball sur demandeur, rouge `#e53935` si ball sur team ; attache tooltip aux `.tl-dot`
 - `tpShowTip(e, entry)` / `tpMoveTip(e)` / `tpHideTip()` — tooltip fixe ciblant `#tp-tooltip`
 - `_tpFormatDateShort(d)` — helper date courte (`"2025-03-15"` → `"15 mar"`)
 

@@ -45,13 +45,7 @@ function statusBadge(s) {
 function actionBadge(a) {
   return `<span class="card-action-status action-${a}"><span class="action-dot"></span>${ACTION_SHORT[a]||ACTION_LABELS[a]||a}</span>`;
 }
-function waitingBadge(d) {
-  if (d.actionStatus !== 'attente_demandeur') return '';
-  const days = daysUntil(d.actionDueDate);
-  if (days !== null && days >= 0)
-    return `<span class="badge-waiting-ok" title="Relance prévue le ${formatDate(d.actionDueDate)}">⏳ En attente (OK)</span>`;
-  return '';
-}
+
 function motifBadge(d) {
   if (d.actionStatus !== 'attente_demandeur' || !d.actionMotif) return '';
   return `<span class="badge-motif">⏸ ${esc(d.actionMotif)}</span>`;

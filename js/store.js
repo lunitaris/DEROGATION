@@ -249,17 +249,6 @@ const Store = {
     this._silentSave(data);
   },
 
-  updateActionBloc(id, detail, dueDate, motif) {
-    const data = this.load();
-    const idx = data.derogations.findIndex(d => d.id === id);
-    if (idx === -1) return;
-    data.derogations[idx].actionDetail = detail;
-    data.derogations[idx].actionDueDate = dueDate || null;
-    data.derogations[idx].actionMotif = motif !== undefined ? motif : (data.derogations[idx].actionMotif || null);
-    data.derogations[idx].dates.updatedAt = new Date().toISOString();
-    this._silentSave(data);
-  },
-
   updateNotes(id, text) {
     const data = this.load();
     const idx = data.derogations.findIndex(d => d.id === id);
