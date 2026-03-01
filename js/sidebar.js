@@ -61,50 +61,11 @@ function renderSidebar(id) {
           Réunion${hasMeetingNotes?' <span class="meeting-dot"></span>':''}
         </button>
       </div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- PORTEUR + ASSET -->
-    <div class="sidebar-section">
-      <div class="section-label">Porteur &amp; Périmètre</div>
-      <div class="porteur-card">
-        <div class="porteur-avatar">${avatarLetter}</div>
-        <div class="porteur-info">
-          <div class="porteur-name">${esc(d.applicant?.name)||'—'}</div>
-          ${d.asset ? `<div class="porteur-asset" title="${esc(d.asset)}">📦 ${esc(d.asset)}</div>` : '<div class="porteur-asset" style="color:var(--text-muted)">Aucun asset renseigné</div>'}
-        </div>
+      <div class="sidebar-hero-porteur">
+        <span class="sidebar-hero-avatar-sm">${avatarLetter}</span>
+        <span class="sidebar-hero-name">${esc(d.applicant?.name)||'—'}</span>
+        ${d.asset ? `<span class="sidebar-hero-asset" title="${esc(d.asset)}">· ${esc(d.asset)}</span>` : ''}
       </div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- STATUT SN -->
-    <div class="sidebar-section">
-      <div class="section-label">Cycle de vie ServiceNow</div>
-      <div class="status-bloc">
-        <div class="status-bloc-label">Statut SN</div>
-        <select class="status-select-inline" style="flex:1;" onchange="quickUpdate('${id}','status',this.value)">
-          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${d.status===v?'selected':''}>${l}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- JOURNAL D'ACTIONS -->
-    <div class="sidebar-section">
-      <div class="section-label">Journal</div>
-      <div class="action-log-wrap">
-        <div class="action-log-header">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Suivi des actions
-          <button class="action-log-btn-add-header" onclick="addActionLogEntry('${id}')" title="Ajouter une entrée">+</button>
-        </div>
-        <div id="action-log-body" class="action-log-body"></div>
-        <button class="action-log-more" id="action-log-more" onclick="toggleActionLog('${id}')" style="display:none"></button>
-      </div>
-      <div class="action-log-hint" id="action-log-hint"></div>
     </div>
 
     <div class="sidebar-divider"></div>
@@ -137,6 +98,51 @@ function renderSidebar(id) {
     </div>`;
     })()}
 
+    <div class="sidebar-divider"></div>
+
+    <!-- NOTES LIBRES -->
+    <div class="sidebar-section">
+      <div class="section-label">Notes</div>
+      <div class="quick-notes-wrap">
+        <div class="quick-notes-header">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Notes libres
+        </div>
+        <textarea class="quick-notes-textarea" id="quick-notes" placeholder="Idées, rappels, contexte informel, liens utiles…" oninput="autoResizeTA(this);scheduleQuickNotesSave('${id}')">${esc(d.notes||'')}</textarea>
+      </div>
+      <div class="quick-notes-hint" id="quick-notes-hint"></div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- STATUT SN -->
+    <div class="sidebar-section">
+      <div class="section-label">Cycle de vie ServiceNow</div>
+      <div class="status-bloc">
+        <div class="status-bloc-label">Statut SN</div>
+        <select class="status-select-inline" style="flex:1;" onchange="quickUpdate('${id}','status',this.value)">
+          ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${d.status===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- JOURNAL D'ACTIONS -->
+    <div class="sidebar-section">
+      <div class="section-label">Journal</div>
+      <div class="action-log-wrap">
+        <div class="action-log-header">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Suivi des actions
+          <button class="action-log-btn-add-header" onclick="addActionLogEntry('${id}')" title="Ajouter une entrée">+</button>
+        </div>
+        <div id="action-log-body" class="action-log-body"></div>
+        <button class="action-log-more" id="action-log-more" onclick="toggleActionLog('${id}')" style="display:none"></button>
+      </div>
+      <div class="action-log-hint" id="action-log-hint"></div>
+    </div>
+
     <!-- NOTES RÉUNION (masqué par défaut si vide) -->
     <div id="meeting-notes-section" style="${hasMeetingNotes?'':'display:none'}">
       <div class="sidebar-divider"></div>
@@ -152,21 +158,6 @@ function renderSidebar(id) {
         </div>
         <div class="meeting-notes-hint" id="meeting-notes-hint"></div>
       </div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- NOTES LIBRES -->
-    <div class="sidebar-section">
-      <div class="section-label">Notes</div>
-      <div class="quick-notes-wrap">
-        <div class="quick-notes-header">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Notes libres
-        </div>
-        <textarea class="quick-notes-textarea" id="quick-notes" placeholder="Idées, rappels, contexte informel, liens utiles…" oninput="autoResizeTA(this);scheduleQuickNotesSave('${id}')">${esc(d.notes||'')}</textarea>
-      </div>
-      <div class="quick-notes-hint" id="quick-notes-hint"></div>
     </div>
 
     <div class="sidebar-divider"></div>
@@ -395,7 +386,7 @@ function _sortedActionLogIndices() {
       if (!da && !db) return 0;
       if (!da) return 1;
       if (!db) return -1;
-      return da.localeCompare(db);
+      return db.localeCompare(da); /* décroissant */
     });
 }
 
@@ -406,10 +397,10 @@ function renderActionLogSection(id) {
 
   const total = _actionLog.length;
   const sortedIdx = _sortedActionLogIndices();
-  /* Collapse : montre les 4 entrées les plus récentes (fin du tri croissant) */
-  const startPos = (!actionLogExpanded && total > 4) ? total - 4 : 0;
-  const visibleSortedIdx = sortedIdx.slice(startPos);
-  const hiddenCount = startPos;
+  /* Collapse : montre les 4 entrées les plus récentes (début du tri décroissant) */
+  const endPos = (!actionLogExpanded && total > 4) ? 4 : total;
+  const visibleSortedIdx = sortedIdx.slice(0, endPos);
+  const hiddenCount = total - endPos;
 
   if (total === 0) {
     body.innerHTML = `<div class="action-log-empty"><button class="action-log-btn-new" onclick="addActionLogEntry('${id}')">+ Ajouter une entrée</button></div>`;

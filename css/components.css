@@ -127,6 +127,12 @@
 .btn-meeting.has-content { border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.12); }
 .meeting-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f97316; flex-shrink: 0; }
 
+/* HERO — porteur inline (sous ticket ID) */
+.sidebar-hero-porteur { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11px; min-width: 0; }
+.sidebar-hero-avatar-sm { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+.sidebar-hero-name { color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+.sidebar-hero-asset { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
 /* MEETING NOTES — préparation réunion */
 .meeting-notes-wrap { border-radius: var(--radius-md); overflow: hidden; border: 1px solid #c05a00; }
 .meeting-notes-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #f97316; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
