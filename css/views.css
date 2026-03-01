@@ -32,8 +32,10 @@
 .last-check-none  { color: var(--text-muted); font-size: 11px; }
 .completude-bar { display: flex; align-items: center; gap: 4px; }
 .completude-pip { width: 8px; height: 8px; border-radius: 2px; background: var(--border); flex-shrink: 0; }
-.completude-pip.filled { background: var(--status-validated-text); }
-.completude-pip.checked { background: var(--accent); }
+.completude-pip.checked { background: var(--status-validated-text); }
+/* Next Date pilotage — masque le placeholder jj/mm/aaaa quand vide et non focalisé */
+.inline-date-ghost[value=""]:not(:focus) { color: transparent; border-color: transparent; background: transparent; }
+.inline-date-ghost[value=""]:not(:focus)::-webkit-calendar-picker-indicator { display: none; }
 .due-soon  { color: var(--urgency-p1); font-weight: 700; font-size: 11px; }
 .due-late  { color: var(--urgency-p0); font-weight: 700; font-size: 11px; }
 .due-ok    { color: var(--text-muted); font-size: 11px; }

@@ -154,6 +154,10 @@ function sharedIndicatorsHtml(risk, ns) {
   const ch = n.checks || {};
 
   /* — Dossier ————————————————————————————————————————————————— */
+  const contexte = ch.contexte
+    ? `<span class="risk-ind-yes">✓ Oui</span>`
+    : `<span class="risk-ind-no">✗ Non</span>`;
+
   const mitig = ch.mitigations
     ? `<span class="risk-ind-yes">✓ Oui</span>`
     : `<span class="risk-ind-no">✗ Non</span>`;
@@ -162,19 +166,13 @@ function sharedIndicatorsHtml(risk, ns) {
     ? `<span class="risk-ind-yes">✓ Oui</span>`
     : `<span class="risk-ind-no">✗ Non</span>`;
 
-  /* — Technique (tri-state), DIC —————————————————————————————— */
-  const inetVal = r.internetExposed == null
-    ? `<span class="risk-ind-na">N/A</span>`
-    : r.internetExposed
-      ? `<span class="risk-ind-warn">⚠ Oui</span>`
-      : `<span class="risk-ind-yes">✓ Non</span>`;
-
+  /* — DIC ————————————————————————————————————————————————————— */
   const dic = dicHtml(r.dic);
 
   return `<div class="risk-ind-list">
+    <div class="risk-ind-row"><span class="risk-ind-label">Contexte</span>${contexte}</div>
     <div class="risk-ind-row"><span class="risk-ind-label">Mitigations</span>${mitig}</div>
     <div class="risk-ind-row"><span class="risk-ind-label">Plan d'action</span>${plan}</div>
-    <div class="risk-ind-row"><span class="risk-ind-label">Exposé internet</span>${inetVal}</div>
     <div class="risk-ind-row"><span class="risk-ind-label">DIC</span>${dic}</div>
   </div>`;
 }

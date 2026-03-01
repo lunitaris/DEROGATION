@@ -29,9 +29,8 @@ function renderPilotage(list) {
     const chk = ns.checks || {};
     const KEYS = ['contexte','raison','risques','plan','mitigations','remediations'];
     const pips = KEYS.map(k => {
-      const hasContent = (ns[k]||'').trim().length > 0;
       const isChecked = chk[k];
-      return `<span class="completude-pip${isChecked?' checked':hasContent?' filled':''}" title="${k}"></span>`;
+      return `<span class="completude-pip${isChecked ? ' checked' : ''}" title="${k}"></span>`;
     }).join('');
     return `<div class="completude-bar">${pips}</div>`;
   }
@@ -60,8 +59,10 @@ function renderPilotage(list) {
           onchange="Store.update('${d.id}',{lastCheckedAt:this.value});renderAll();"
           title="Dernière vérification ServiceNow">
       </td>
-      <td class="pt-relance" style="font-size:11px;">
-        ${d.dates.nextFollowup ? `<span class="${daysUntil(d.dates.nextFollowup)<0?'expiry-danger':daysUntil(d.dates.nextFollowup)<=7?'expiry-warn':'due-ok'}" title="${formatDate(d.dates.nextFollowup)}">${daysUntil(d.dates.nextFollowup)<0?'Dépassée':'J-'+daysUntil(d.dates.nextFollowup)}</span>` : '<span class="due-ok">—</span>'}
+      <td class="pt-relance" onclick="event.stopPropagation()">
+        <input type="date" class="inline-date inline-date-ghost" value="${toDateInputVal(d.dates.nextFollowup)}"
+          onchange="Store.update('${d.id}',{nextFollowup:this.value||null});renderAll();"
+          title="Next date clé">
       </td>
     </tr>`;
   }).join('');
@@ -76,7 +77,7 @@ function renderPilotage(list) {
       <th class="pt-lastjournal">Dernière action journal</th>
       <th class="pt-check" title="Complétude dossier (6 sections)">Dossier</th>
       ${thSort('Vérifié','lastChecked','class="pt-last"')}
-      <th class="pt-relance">Relance</th>
+      <th class="pt-relance">Next Date</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
