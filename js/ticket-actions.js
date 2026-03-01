@@ -8,7 +8,6 @@ let tp_currentId = null;
 let tp_journal   = [];          /* copie locale du journal (source de vérité) */
 
 /* ── Timers debounce ── */
-let tp_actionSaveTimer     = null;
 let tp_meetingNotesSaveTimer = null;
 let tp_notesSaveTimer      = null;
 let tp_dossierSaveTimer    = null;
@@ -44,44 +43,6 @@ function tpOpenEdit() {
 }
 
 /* ================================================================
-   NEXT STEPS — changement d'action status
-================================================================ */
-function tpOnActionStatusChange(val) {
-  if (!tp_currentId) return;
-  const motifRow = document.getElementById('tp-motif-row');
-  if (motifRow) {
-    motifRow.style.display = val === 'attente_demandeur' ? 'flex' : 'none';
-  }
-  /* Reset motif si on quitte attente_demandeur */
-  if (val !== 'attente_demandeur') {
-    const motifSel = document.getElementById('tp-action-motif');
-    if (motifSel) motifSel.value = '';
-  }
-  /* Sauvegarde immédiate du changement de statut (important) */
-  const d = Store.getById(tp_currentId);
-  if (!d) return;
-  const motifSel = document.getElementById('tp-action-motif');
-  const motif = val === 'attente_demandeur' ? (motifSel?.value || null) : null;
-  Store.update(tp_currentId, { actionStatus: val, actionMotif: motif });
-  tpHint('tp-action-save-hint');
-}
-
-/* ================================================================
-   NEXT STEPS — autosave detail + dueDate + motif (debounce 800ms)
-================================================================ */
-function tpScheduleActionSave() {
-  clearTimeout(tp_actionSaveTimer);
-  tp_actionSaveTimer = setTimeout(() => {
-    if (!tp_currentId) return;
-    const detail  = document.getElementById('tp-action-detail')?.value || '';
-    const dueDate = document.getElementById('tp-action-due')?.value || null;
-    const motif   = document.getElementById('tp-action-motif')?.value || null;
-    Store.updateActionBloc(tp_currentId, detail, dueDate || null, motif);
-    tpHint('tp-action-save-hint');
-  }, 800);
-}
-
-/* ================================================================
    MEETING NOTES
 ================================================================ */
 function tpToggleMeetingNotes() {
@@ -103,9 +64,11 @@ function tpClearMeetingNotes() {
   const ta = document.querySelector('.tp-meeting-ta');
   if (ta) ta.value = '';
   Store.updateMeetingNotes(tp_currentId, '');
-  /* Cache la section */
+  /* Cache la section et le panneau gauche (devenu inutile) */
   const section = document.getElementById('tp-meeting-notes');
   if (section) section.style.display = 'none';
+  const pane = document.getElementById('tp-left-pane');
+  if (pane) pane.style.display = 'none';
 }
 
 function tpScheduleMeetingNotesSave() {
@@ -136,7 +99,7 @@ function tpScheduleNotesSave() {
 /* ================================================================
    JOURNAL D'ACTIONS
 ================================================================ */
-/* Retourne les indices de tp_journal triés par date croissante (sans date → fin) */
+/* Retourne les indices de tp_journal triés par date décroissante (plus récent → plus ancien) */
 function _tpSortedJournalIndices() {
   return tp_journal
     .map((_, i) => i)
@@ -144,9 +107,9 @@ function _tpSortedJournalIndices() {
       const da = tp_journal[a].date || '';
       const db = tp_journal[b].date || '';
       if (!da && !db) return 0;
-      if (!da) return 1;
+      if (!da) return 1;  /* sans date → fin de liste */
       if (!db) return -1;
-      return da.localeCompare(db);
+      return db.localeCompare(da); /* décroissant */
     });
 }
 
@@ -176,23 +139,20 @@ function tpRenderJournal() {
   }
   const sortedIdx = _tpSortedJournalIndices();
   body.innerHTML = sortedIdx.map(realIdx => {
-    const entry    = tp_journal[realIdx];
-    const et       = ETYPES[entry.etype || 'commentaire'];
-    const dotColor = et ? et.color : '#78909c';
+    const entry = tp_journal[realIdx];
     return `
     <div class="tp-jrow" data-real-idx="${realIdx}">
       <div class="tp-jrow-meta">
-        <span class="tp-jrow-dot" style="background:${dotColor}"></span>
+        <input type="date" class="action-log-date"
+          value="${entry.date || ''}"
+          oninput="tpUpdateJournal(${realIdx},'date',this.value)"
+          onchange="tpRenderJournal()">
         <select class="tp-j-actor-sel" onchange="tpUpdateJournal(${realIdx},'actor',this.value)">
           ${_tpActorOptions(entry.actor || 'team')}
         </select>
         <select class="tp-j-etype-sel" onchange="tpUpdateJournal(${realIdx},'etype',this.value)">
           ${_tpEtypeOptions(entry.etype || 'commentaire')}
         </select>
-        <input type="date" class="action-log-date"
-          value="${entry.date || ''}"
-          oninput="tpUpdateJournal(${realIdx},'date',this.value)"
-          onchange="tpRenderJournal()">
         <button class="action-log-btn-remove" onclick="tpRemoveJournalEntry(${realIdx})" title="Supprimer cette entrée">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>

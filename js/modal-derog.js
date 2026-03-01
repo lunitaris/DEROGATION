@@ -68,7 +68,7 @@ function renderModalForm(d) {
 
     <!-- WORKFLOW -->
     <div class="form-section">
-      <div class="form-section-title">Cycle de vie &amp; Next steps</div>
+      <div class="form-section-title">Workflow &amp; Statut</div>
       <div class="form-row">
         <div class="form-field">
           <label>Statut ServiceNow</label>
@@ -89,14 +89,6 @@ function renderModalForm(d) {
           <option value="">— Sélectionner un motif</option>
           ${MOTIF_LABELS.map(m=>`<option value="${m}" ${(d?.actionMotif||'')=== m?'selected':''}>${m}</option>`).join('')}
         </select>
-      </div>
-      <div class="action-combo">
-        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Dernière action / Contexte</div>
-        <textarea class="action-combo-detail" id="f-actionDetail" placeholder="Ex: 15/03 — relancé Jean Dupont, attente DIC. Réunion prévue le 22 si pas de retour…">${esc(d?.actionDetail||'')}</textarea>
-        <div class="action-combo-date-row">
-          <span class="action-combo-date-label">Date prévisionnelle (relance / échéance)</span>
-          <input type="date" class="action-combo-date" id="f-actionDueDate" value="${toDateInputVal(d?.actionDueDate)}">
-        </div>
       </div>
     </div>
 
@@ -199,8 +191,6 @@ function saveDerogation() {
     asset:             g('f-asset')?.value.trim()        || '',
     status:            g('f-status')?.value               || 'new',
     actionStatus:      g('f-actionStatus')?.value         || 'a_faire',
-    actionDetail:      g('f-actionDetail')?.value         || '',
-    actionDueDate:     g('f-actionDueDate')?.value        || null,
     actionMotif:       g('f-actionMotif')?.value          || null,
     urgency:           g('f-urgency')?.value              || '-',
     edrInstalled:      v.edr  || '',

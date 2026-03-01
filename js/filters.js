@@ -7,7 +7,6 @@
 let currentView = 'card';
 let activeSidebarId = null;
 let filteredIds = [];
-let actionSaveTimer = null;
 let notesSaveTimer = null;
 let quickNotesSaveTimer = null;
 let meetingNotesSaveTimer = null;

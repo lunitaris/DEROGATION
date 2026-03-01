@@ -12,10 +12,8 @@ function renderPilotage(list) {
     switch (pilotageSortKey) {
       case 'expiresAt':    va=a.dates.expiresAt||'9999';     vb=b.dates.expiresAt||'9999'; break;
       case 'lastChecked':  va=a.dates.lastCheckedAt||'0000'; vb=b.dates.lastCheckedAt||'0000'; break;
-      case 'actionStatus': va=a.actionStatus||'';            vb=b.actionStatus||''; break;
       case 'status':       va=a.status||'';                  vb=b.status||''; break;
       case 'porteur':      va=a.applicant?.name||'';         vb=b.applicant?.name||''; break;
-      case 'actionDue':    va=a.actionDueDate||'9999';       vb=b.actionDueDate||'9999'; break;
       default:             va=a.ticketId||'';                vb=b.ticketId||''; break;
     }
     return pilotageSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
@@ -60,16 +58,24 @@ function renderPilotage(list) {
   }
 
   const rows = sorted.map(d => {
-    const detailTrunc = (d.actionDetail||'').slice(0,45) + ((d.actionDetail||'').length > 45 ? '…' : '');
+    /* Dernière entrée du journal (la plus récente par date) */
+    const actionLog = d.actionLog || [];
+    let lastJournalHtml = '<span style="color:var(--text-muted)">—</span>';
+    let lastJournalTitle = '';
+    if (actionLog.length > 0) {
+      const la = [...actionLog].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+      const et = ETYPES && ETYPES[la.etype || 'commentaire'];
+      const text = (la.text || '').slice(0, 50) + ((la.text || '').length > 50 ? '…' : '');
+      lastJournalTitle = (la.date ? la.date + ' · ' : '') + (la.text || '');
+      lastJournalHtml = `${et ? `<span style="opacity:.75">${et.emoji}</span> ` : ''}${esc(text) || '<span style="color:var(--text-muted)">—</span>'}`;
+    }
     return `<tr class="${activeSidebarId===d.id?'selected':''}" data-id="${d.id}" onclick="openSidebar('${d.id}')" onauxclick="if(event.button===1){event.preventDefault();openFullscreen('${d.id}')}">
       <td class="pt-fs" onclick="event.stopPropagation()"><button class="pt-fullscreen" onclick="openFullscreen('${d.id}')" title="Ouvrir en plein écran"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></td>
       <td class="pt-ticket">${esc(d.ticketId)||'—'}</td>
       <td class="pt-title" title="${esc(d.title)}">${esc(d.title)||'(Sans titre)'}</td>
       <td class="pt-porteur" style="font-size:12px;" title="${esc(d.applicant?.name)}">${esc(d.applicant?.name)||'—'}</td>
       <td class="pt-statut">${statusBadge(d.status)}</td>
-      <td class="pt-action">${actionBadge(d.actionStatus)}</td>
-      <td class="pt-motif">${motifCell(d)}</td>
-      <td class="pt-detail" title="${esc(d.actionDetail)}">${esc(detailTrunc)||'<span style="color:var(--text-muted)">—</span>'}</td>
+      <td class="pt-lastjournal" title="${esc(lastJournalTitle)}">${lastJournalHtml}</td>
       <td class="pt-check">${completudeCell(d)}</td>
       <td class="pt-last" onclick="event.stopPropagation()">
         <input type="date" class="inline-date" value="${toDateInputVal(d.dates.lastCheckedAt)}"
@@ -89,9 +95,7 @@ function renderPilotage(list) {
       <th class="pt-title">Titre</th>
       ${thSort('Porteur','porteur','class="pt-porteur"')}
       ${thSort('Statut','status','class="pt-statut"')}
-      ${thSort('Next step','actionStatus','class="pt-action"')}
-      <th class="pt-motif">Motif</th>
-      <th class="pt-detail">Dernière action / Contexte</th>
+      <th class="pt-lastjournal">Dernière action journal</th>
       <th class="pt-check" title="Complétude dossier (6 sections)">Dossier</th>
       ${thSort('Vérifié','lastChecked','class="pt-last"')}
       <th class="pt-relance">Relance</th>

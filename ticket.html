@@ -60,26 +60,37 @@
     <div id="tp-identity-content"><!-- renderIdentityStrip() --></div>
   </div>
 
-  <!-- ZONE DE TRAVAIL : 2 PANNEAUX -->
+  <!-- ZONE DE TRAVAIL : CADRE SUPÉRIEUR + 2 PANNEAUX -->
   <div id="tp-workspace">
 
-    <!-- PANNEAU GAUCHE — actions / opérationnel -->
-    <div id="tp-left-pane">
-      <div id="tp-risk-profile"><!-- renderRiskProfile() --></div>
-      <div id="tp-next-steps"><!-- renderNextSteps() --></div>
-      <div id="tp-meeting-notes"><!-- renderMeetingNotes() --></div>
-      <div id="tp-quick-notes"><!-- renderQuickNotes() --></div>
+    <!-- CADRE SUPÉRIEUR FUSIONNÉ — Profil de risque · Next Steps · Notes · Cycle de vie -->
+    <div id="tp-summary">
+      <div class="tp-summary-inner">
+        <div id="tp-risk-profile"><!-- renderRiskProfile() --></div>
+        <div class="tp-summary-divider"></div>
+        <div id="tp-quick-notes"><!-- renderQuickNotes() --></div>
+        <div class="tp-summary-divider"></div>
+        <div id="tp-lifecycle"><!-- renderLifecycle() --></div>
+      </div>
     </div>
 
-    <!-- PANNEAU DROIT — documentation / historique -->
-    <div id="tp-right-pane">
-      <div id="tp-lifecycle"><!-- renderLifecycle() --></div>
-      <div id="tp-dossier-row">
-        <div id="tp-dossier"><!-- renderDossier() --></div>
-        <div id="tp-timeline"><!-- renderTimelineSection() --></div>
+    <!-- PANNEAUX SCROLLABLES -->
+    <div id="tp-panes">
+
+      <!-- PANNEAU GAUCHE — préparation réunion -->
+      <div id="tp-left-pane">
+        <div id="tp-meeting-notes"><!-- renderMeetingNotes() --></div>
       </div>
-      <div id="tp-journal"><!-- renderJournalShell() --></div>
-      <div id="tp-auto-history"><!-- renderAutoHistory() --></div>
+
+      <!-- PANNEAU DROIT — documentation / historique -->
+      <div id="tp-right-pane">
+        <div id="tp-dossier-row">
+          <div id="tp-dossier"><!-- renderDossier() --></div>
+          <div id="tp-timeline"><!-- renderTimelineSection() --></div>
+        </div>
+        <div id="tp-journal"><!-- renderJournalShell() --></div>
+      </div>
+
     </div>
 
   </div>

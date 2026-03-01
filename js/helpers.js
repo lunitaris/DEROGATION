@@ -30,7 +30,7 @@ function expiryLabel(iso) {
 
 /* DIC */
 function dicVal(v, prefix) {
-  if (!v || v === 0) return `<span class="dic-val dic-unknown" title="${prefix} — non renseigné">${prefix}?</span>`;
+  if (!v || v === 0) return `<span class="dic-val dic-unknown" title="${prefix} — non renseigné">${prefix}—</span>`;
   return `<span class="dic-val dic-${v}" title="${prefix}">${prefix}${v}</span>`;
 }
 function dicHtml(dic) {

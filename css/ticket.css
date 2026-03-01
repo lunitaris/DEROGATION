@@ -208,14 +208,94 @@ body {
 .tp-id-meta strong { color: var(--text-primary); font-weight: 500; }
 
 /* ================================================================
-   ZONE DE TRAVAIL 2 PANNEAUX
+   ZONE DE TRAVAIL — layout colonne (summary + panneaux)
 ================================================================ */
 #tp-workspace {
   position: fixed;
   top: calc(var(--tp-topbar-h) + var(--tp-strip-h));
   left: 0; right: 0; bottom: 0;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+
+/* ── Cadre supérieur fusionné ── */
+#tp-summary {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tp-summary-inner {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+#tp-risk-profile {
+  flex: 0 0 185px;
+  padding: 14px;
+}
+
+/* Notes dans le cadre supérieur — remplit toute la hauteur disponible */
+#tp-quick-notes {
+  flex: 1;
+  min-width: 180px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-summary-inner #tp-quick-notes .tp-notes-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(234, 179, 8, 0.04);
+  border: none;
+  border-radius: 0;
+  padding: 14px;
+}
+[data-theme="light"] .tp-summary-inner #tp-quick-notes .tp-notes-wrap {
+  background: rgba(234, 179, 8, 0.05);
+}
+
+/* La textarea remplit toute la hauteur restante dans la colonne */
+.tp-summary-inner #tp-quick-notes .tp-notes-ta {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+#tp-lifecycle {
+  flex: 0 0 270px;
+  padding: 14px;
+}
+
+.tp-summary-divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.tp-summary-col-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Panneaux scrollables ── */
+#tp-panes {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
 }
 
 #tp-left-pane {
@@ -269,59 +349,6 @@ body {
   color: var(--text-muted);
   margin-bottom: 12px;
 }
-
-/* ================================================================
-   NEXT STEPS (panneau gauche)
-================================================================ */
-.tp-next-steps-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.tp-field-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.tp-field-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.tp-field-row select,
-.tp-field-row input[type="date"],
-.tp-field-row textarea {
-  width: 100%;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 13px;
-  padding: 6px 8px;
-  font-family: var(--font);
-  transition: border-color var(--transition);
-  box-sizing: border-box;
-}
-.tp-field-row select:focus,
-.tp-field-row input[type="date"]:focus,
-.tp-field-row textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.tp-field-row textarea {
-  resize: none;
-  overflow-y: hidden;
-  min-height: 60px;
-}
-.tp-field-row input[type="date"] {
-  color-scheme: dark;
-}
-[data-theme="light"] .tp-field-row input[type="date"] {
-  color-scheme: light;
-}
-
-#tp-motif-row { display: none; }
 
 .tp-save-hint {
   font-size: 11px;
@@ -737,30 +764,6 @@ body {
 }
 
 /* ================================================================
-   HISTORIQUE AUTO (panneau droit)
-================================================================ */
-.tp-history-list { display: flex; flex-direction: column; gap: 8px; }
-.tp-history-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 12px;
-}
-.tp-history-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-.tp-history-dot.created { background: var(--status-new-text); }
-.tp-history-dot.status_changed { background: var(--accent); }
-.tp-history-dot.action_changed { background: var(--status-validated-text); }
-.tp-history-meta { color: var(--text-muted); }
-.tp-history-desc { color: var(--text-primary); }
-
-/* ================================================================
    TOAST
 ================================================================ */
 .tp-toast {
@@ -1013,12 +1016,18 @@ body {
 @media (max-width: 900px) {
   :root { --tp-left-w: 320px; }
   .tp-btn-email { font-size: 11px; padding: 4px 8px; }
+  #tp-risk-profile { flex: 0 0 160px; }
+  #tp-lifecycle { flex: 0 0 230px; }
 }
 @media (max-width: 700px) {
-  #tp-workspace { flex-direction: column; overflow: hidden; }
+  #tp-summary { padding: 8px 10px; }
+  .tp-summary-inner { flex-direction: column; }
+  .tp-summary-divider { width: auto; height: 1px; }
+  #tp-risk-profile, #tp-lifecycle { flex: none; width: 100%; }
+  #tp-panes { flex-direction: column; }
   #tp-left-pane {
     width: 100%;
-    max-height: 45vh;
+    max-height: 35vh;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }

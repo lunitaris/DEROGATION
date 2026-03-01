@@ -90,18 +90,16 @@ function renderTicketPage(d) {
   renderTopbar(d);
   renderIdentityStrip(d);
   renderRiskProfile(d);
-  renderNextSteps(d);
   renderMeetingNotes(d);
   renderQuickNotes(d);
   renderTimelineSection();
   renderJournalShell(d);
   renderDossier(d);
   renderLifecycle(d);
-  renderAutoHistory(d);
 
-  /* Redimensionne toutes les textareas après rendu */
+  /* Redimensionne les textareas après rendu (exclut celles avec data-no-autoresize) */
   requestAnimationFrame(() => {
-    document.querySelectorAll('textarea').forEach(autoResizeTA);
+    document.querySelectorAll('textarea:not([data-no-autoresize])').forEach(autoResizeTA);
   });
 }
 
@@ -154,70 +152,6 @@ function renderIdentityStrip(d) {
 }
 
 /* ================================================================
-   NEXT STEPS (panneau gauche)
-================================================================ */
-function renderNextSteps(d) {
-  const el = document.getElementById('tp-next-steps');
-  if (!el) return;
-  const ns = d.notesStructured || {};
-
-  /* Construit les options select actionStatus */
-  const actionOptions = Object.entries(ACTION_LABELS).map(([k, v]) =>
-    `<option value="${k}" ${d.actionStatus === k ? 'selected' : ''}>${v}</option>`
-  ).join('');
-
-  /* Options motif */
-  const motifOptions = [
-    `<option value="">— Motif —</option>`,
-    ...Object.entries(MOTIF_LABELS).map(([k, v]) =>
-      `<option value="${k}" ${d.actionMotif === k ? 'selected' : ''}>${v}</option>`)
-  ].join('');
-
-  const showMotif = d.actionStatus === 'attente_demandeur';
-  const dueVal    = d.actionDueDate ? d.actionDueDate.slice(0, 10) : '';
-
-  el.innerHTML = `
-    <div class="tp-section">
-      <div class="tp-section-title">Next Steps</div>
-      <div class="tp-next-steps-grid">
-
-        <div class="tp-field-row">
-          <span class="tp-field-label">Qui doit agir</span>
-          <select id="tp-action-status"
-            onchange="tpOnActionStatusChange(this.value)">
-            ${actionOptions}
-          </select>
-        </div>
-
-        <div class="tp-field-row" id="tp-motif-row" style="display:${showMotif ? 'flex' : 'none'}">
-          <span class="tp-field-label">Motif</span>
-          <select id="tp-action-motif"
-            onchange="tpScheduleActionSave()">
-            ${motifOptions}
-          </select>
-        </div>
-
-        <div class="tp-field-row">
-          <span class="tp-field-label">Dernière action / Contexte</span>
-          <textarea id="tp-action-detail"
-            placeholder="Décris la dernière action ou le contexte actuel…"
-            oninput="autoResizeTA(this); tpScheduleActionSave()"
-            >${esc(d.actionDetail || '')}</textarea>
-        </div>
-
-        <div class="tp-field-row">
-          <span class="tp-field-label">Échéance prévisionnelle</span>
-          <input type="date" id="tp-action-due"
-            value="${dueVal}"
-            onchange="tpScheduleActionSave()">
-        </div>
-
-        <div class="tp-save-hint" id="tp-action-save-hint">✓ Sauvegardé</div>
-      </div>
-    </div>`;
-}
-
-/* ================================================================
    MEETING NOTES (panneau gauche) — fond orange
 ================================================================ */
 function renderMeetingNotes(d) {
@@ -225,6 +159,9 @@ function renderMeetingNotes(d) {
   if (!el) return;
   const hasMeeting = !!(d.meetingNotes && d.meetingNotes.trim());
   el.style.display = hasMeeting ? 'block' : 'none';
+  /* Le panneau gauche n'est utile que si des meeting notes sont présentes */
+  const pane = document.getElementById('tp-left-pane');
+  if (pane) pane.style.display = hasMeeting ? 'flex' : 'none';
   el.innerHTML = `
     <div class="tp-meeting-wrap">
       <div class="tp-meeting-header">
@@ -249,6 +186,8 @@ function tpShowMeetingNotes() {
   const section = document.getElementById('tp-meeting-notes');
   if (!section) return;
   section.style.display = 'block';
+  const pane = document.getElementById('tp-left-pane');
+  if (pane) pane.style.display = 'flex';
   const ta = section.querySelector('.tp-meeting-ta');
   if (ta) {
     ta.focus();
@@ -257,7 +196,7 @@ function tpShowMeetingNotes() {
 }
 
 /* ================================================================
-   NOTES LIBRES (panneau gauche) — fond jaune post-it
+   NOTES LIBRES (cadre supérieur) — fond jaune post-it
 ================================================================ */
 function renderQuickNotes(d) {
   const el = document.getElementById('tp-quick-notes');
@@ -271,8 +210,9 @@ function renderQuickNotes(d) {
         </button>
       </div>
       <textarea class="tp-notes-ta"
+        data-no-autoresize
         placeholder="Notes rapides, post-it…"
-        oninput="autoResizeTA(this); tpScheduleNotesSave()"
+        oninput="tpScheduleNotesSave()"
         >${esc(d.notes || '')}</textarea>
       <div class="tp-notes-hint" id="tp-notes-hint">✓ Sauvegardé</div>
     </div>`;
@@ -285,10 +225,8 @@ function renderRiskProfile(d) {
   const el = document.getElementById('tp-risk-profile');
   if (!el) return;
   el.innerHTML = `
-    <div class="tp-section">
-      <div class="tp-section-title">Profil de risque</div>
-      ${sharedRiskHtml(d.risk, RISK_PARAMS_TICKET)}
-    </div>`;
+    <div class="tp-summary-col-title">Profil de risque</div>
+    ${sharedRiskHtml(d.risk, RISK_PARAMS_TICKET)}`;
 }
 
 /* ================================================================
@@ -430,59 +368,33 @@ function renderLifecycle(d) {
   }
 
   el.innerHTML = `
-    <div class="tp-section">
-      <div class="tp-section-title">Cycle de vie</div>
-      <div class="tp-lifecycle-grid">
-        <div class="tp-lc-item">
-          <span class="tp-lc-label">Créé le</span>
-          <span class="tp-lc-val">${formatDate(dates.createdAt) || '—'}</span>
-        </div>
-        <div class="tp-lc-item">
-          <span class="tp-lc-label">Mis à jour</span>
-          <span class="tp-lc-val">${formatDate(dates.updatedAt) || '—'}</span>
-        </div>
-        <div class="tp-lc-item">
-          <span class="tp-lc-label">Expire le</span>
-          <span class="tp-lc-val ${expiryClass(daysUntil(dates.expiresAt))}">${formatDate(dates.expiresAt) || '—'}</span>
-        </div>
-        <div class="tp-lc-item">
-          <span class="tp-lc-label">Prochaine relance</span>
-          <span class="tp-lc-val ${dates.nextFollowup ? '' : 'muted'}">${formatDate(dates.nextFollowup) || '—'}</span>
-        </div>
-        ${lastActionHtml}
-        <div class="tp-lastcheck-row">
-          <div class="tp-lastcheck-info">
-            <div class="tp-lc-label">Dernière vérif. ServiceNow</div>
-            <div class="tp-lc-val ${lcCls}" id="tp-lastcheck-val">
-              ${dates.lastCheckedAt ? formatDate(dates.lastCheckedAt) + lcSuffix : '—'}
-            </div>
-          </div>
-          <button class="tp-lastcheck-btn" onclick="tpMarkCheckedNow()">✓ Vérifier maintenant</button>
-        </div>
+    <div class="tp-summary-col-title">Cycle de vie</div>
+    <div class="tp-lifecycle-grid">
+      <div class="tp-lc-item">
+        <span class="tp-lc-label">Créé le</span>
+        <span class="tp-lc-val">${formatDate(dates.createdAt) || '—'}</span>
       </div>
-    </div>`;
-}
-
-/* ================================================================
-   HISTORIQUE AUTOMATIQUE (panneau droit)
-================================================================ */
-function renderAutoHistory(d) {
-  const el = document.getElementById('tp-auto-history');
-  if (!el) return;
-  const rows = sharedHistoryItems(d.history).map(({timestamp, event, label, desc}) => `
-      <div class="tp-history-item">
-        <div class="tp-history-dot ${event}"></div>
-        <div>
-          <span class="tp-history-meta">${formatDate(timestamp) || '—'} · ${label}</span>
-          ${desc ? `<span class="tp-history-desc"> — ${desc}</span>` : ''}
+      <div class="tp-lc-item">
+        <span class="tp-lc-label">Mis à jour</span>
+        <span class="tp-lc-val">${formatDate(dates.updatedAt) || '—'}</span>
+      </div>
+      <div class="tp-lc-item">
+        <span class="tp-lc-label">Expire le</span>
+        <span class="tp-lc-val ${expiryClass(daysUntil(dates.expiresAt))}">${formatDate(dates.expiresAt) || '—'}</span>
+      </div>
+      <div class="tp-lc-item">
+        <span class="tp-lc-label">Prochaine relance</span>
+        <span class="tp-lc-val ${dates.nextFollowup ? '' : 'muted'}">${formatDate(dates.nextFollowup) || '—'}</span>
+      </div>
+      ${lastActionHtml}
+      <div class="tp-lastcheck-row">
+        <div class="tp-lastcheck-info">
+          <div class="tp-lc-label">Dernière vérif. ServiceNow</div>
+          <div class="tp-lc-val ${lcCls}" id="tp-lastcheck-val">
+            ${dates.lastCheckedAt ? formatDate(dates.lastCheckedAt) + lcSuffix : '—'}
+          </div>
         </div>
-      </div>`).join('');
-
-  el.innerHTML = `
-    <div class="tp-section">
-      <div class="tp-section-title">Historique</div>
-      <div class="tp-history-list">
-        ${rows || '<div class="tp-journal-empty">Aucun événement.</div>'}
+        <button class="tp-lastcheck-btn" onclick="tpMarkCheckedNow()">✓ Vérifier maintenant</button>
       </div>
     </div>`;
 }

@@ -103,14 +103,6 @@
   flex-wrap: wrap;
 }
 
-.tp-jrow-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
 .tp-j-actor-sel,
 .tp-j-etype-sel {
   width: auto;

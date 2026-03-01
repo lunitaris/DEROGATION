@@ -40,7 +40,6 @@ function renderSidebar(id) {
 
   const days = daysUntil(d.dates.expiresAt);
   const followupDays = daysUntil(d.dates.nextFollowup);
-  const actionDueDays = daysUntil(d.actionDueDate);
   const ns = d.notesStructured || {};
   const checks = ns.checks || {};
   const totalSections = NOTES_SECTIONS.length;
@@ -109,34 +108,33 @@ function renderSidebar(id) {
 
     <div class="sidebar-divider"></div>
 
-    <!-- NEXT STEPS -->
+    <!-- DERNIÈRE ACTION JOURNAL -->
+    ${(() => {
+      const log = d.actionLog || [];
+      if (!log.length) return `
     <div class="sidebar-section">
-      <div class="section-label">Next steps</div>
-      <div class="action-bloc">
-        <div>
-          <div class="action-date-label" style="margin-bottom:4px;">Qui doit agir / Prochaine étape</div>
-          <select class="status-select-inline" onchange="onActionStatusChange('${id}',this.value)">
-            ${Object.entries(ACTION_LABELS).map(([v,l])=>`<option value="${v}" ${d.actionStatus===v?'selected':''}>${l}</option>`).join('')}
-          </select>
+      <div class="section-label">Dernière action journal</div>
+      <div class="sb-lastaction-empty">Aucune entrée dans le journal.</div>
+    </div>`;
+      const la = [...log].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+      const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
+      const et    = ETYPES[la.etype || 'commentaire'] || ETYPES.commentaire;
+      const laText = la.text ? (la.text.length > 100 ? la.text.substring(0, 100) + '…' : la.text) : '';
+      return `
+    <div class="sidebar-section">
+      <div class="section-label">Dernière action journal</div>
+      <div class="sb-lastaction-wrap">
+        <div class="sb-lastaction-header">
+          <span class="sb-lastaction-meta">
+            <span style="color:${actor.color}">${actor.emoji} ${actor.label}</span>
+            <span style="color:${et.color}">${et.emoji} ${et.label}</span>
+          </span>
+          <span class="sb-lastaction-date">${la.date ? formatDate(la.date) : '—'}</span>
         </div>
-        <div id="motif-row" style="display:${d.actionStatus==='attente_demandeur'?'block':'none'}">
-          <div class="action-date-label" style="margin-bottom:4px;">Motif de l'attente</div>
-          <select class="status-select-inline" id="action-motif" onchange="scheduleActionSave('${id}')">
-            <option value="">— Sélectionner un motif</option>
-            ${MOTIF_LABELS.map(m=>`<option value="${m}" ${d.actionMotif===m?'selected':''}>${m}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <div class="action-date-label" style="margin-bottom:4px;">Dernière action / Contexte</div>
-          <textarea class="action-detail-input" id="action-detail" placeholder="Ex: 15/03 — relancé Jean Dupont par mail, attente DIC. Prochaine étape : réunion si pas de retour avant le 22…" oninput="scheduleActionSave('${id}')">${esc(d.actionDetail)}</textarea>
-        </div>
-        <div>
-          <div class="action-date-label">Date prévisionnelle <span style="color:var(--text-muted);font-weight:400;">(relance / échéance / prochaine action)</span></div>
-          <input type="date" class="action-date-input" id="action-due-date" value="${toDateInputVal(d.actionDueDate)}" onchange="scheduleActionSave('${id}')" ${actionDueDays!==null&&actionDueDays<0?'style="color:var(--urgency-p0)"':''}>
-        </div>
-        <div class="action-save-hint" id="action-save-hint"></div>
+        ${laText ? `<div class="sb-lastaction-text">${esc(laText)}</div>` : ''}
       </div>
-    </div>
+    </div>`;
+    })()}
 
     <!-- NOTES RÉUNION (masqué par défaut si vide) -->
     <div id="meeting-notes-section" style="${hasMeetingNotes?'':'display:none'}">
@@ -332,23 +330,6 @@ function scheduleNotesSave(id) {
   }, 400);
 }
 
-/* AUTOSAVE — action bloc (debounce 800ms) */
-function scheduleActionSave(id) {
-  clearTimeout(actionSaveTimer);
-  const hint = document.getElementById('action-save-hint');
-  if (hint) { hint.textContent='En cours…'; hint.className='action-save-hint'; }
-  actionSaveTimer = setTimeout(() => {
-    const detail = document.getElementById('action-detail')?.value||'';
-    const dueDate = document.getElementById('action-due-date')?.value||null;
-    const motif = document.getElementById('action-motif')?.value||null;
-    Store.updateActionBloc(id, detail, dueDate, motif);
-    renderStats();
-    renderTodayPanel();
-    const h2 = document.getElementById('action-save-hint');
-    if (h2) { h2.textContent='✓ Sauvegardé'; h2.className='action-save-hint saved'; }
-  }, 800);
-}
-
 /* AUTOSAVE — quick notes (debounce 800ms) */
 function scheduleQuickNotesSave(id) {
   clearTimeout(quickNotesSaveTimer);
@@ -504,13 +485,3 @@ function toggleActionLog(id) {
   renderActionLogSection(id);
 }
 
-function onActionStatusChange(id, val) {
-  quickUpdate(id, 'actionStatus', val);
-  const row = document.getElementById('motif-row');
-  if (row) row.style.display = val === 'attente_demandeur' ? 'block' : 'none';
-  if (val !== 'attente_demandeur') {
-    Store.update(id, { actionMotif: null });
-    const sel = document.getElementById('action-motif');
-    if (sel) sel.value = '';
-  }
-}
