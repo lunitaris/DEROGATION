@@ -79,16 +79,15 @@ function tpRenderTimeline(entries) {
 
   /* ── Layout ── */
   const actorKeys = Object.keys(ACTORS);
-  const colW      = 120;
-  const padLeft   = 130;   // espace pour les labels de la colonne gauche (demandeur)
-  const totalW    = padLeft + actorKeys.length * colW;
+  const colW      = Math.floor((wrap.clientWidth || 340) / actorKeys.length);
+  const totalW    = colW * actorKeys.length;
   const padTop    = 30;
   const spacingY  = 56;
   const dotR      = 7;
 
   const actorX = {};
   actorKeys.forEach((k, i) => {
-    actorX[k] = padLeft + Math.round(i * colW + colW / 2);
+    actorX[k] = Math.round((i + 0.5) * colW);
   });
 
   const yPositions = [];
@@ -143,8 +142,6 @@ function tpRenderTimeline(entries) {
 
   /* ── Header ── */
   let headerHtml = '<div class="tl-header">';
-  // Spacer gauche aligné sur padLeft pour les labels du demandeur
-  headerHtml += `<div style="flex-basis:${padLeft}px;flex-shrink:0;"></div>`;
   actorKeys.forEach(k => {
     const a = ACTORS[k];
     headerHtml += `<div class="tl-col-head" style="color:${a.color};flex-basis:${colW}px;flex-shrink:0;">` +
@@ -287,11 +284,11 @@ function tpRenderTimeline(entries) {
            `${et.emoji || '?'}</text>`;
 
     /* ── Labels ── */
-    // Première colonne (demandeur) → labels vers la gauche dans padLeft
-    // Autres colonnes → labels vers la droite
-    const isRight = ci > 0;
-    const labelX  = isRight ? cx + dotR + 10 : cx - dotR - 10;
-    const anchor  = isRight ? 'start' : 'end';
+    // Dernière colonne → labels vers la gauche ; autres → vers la droite
+    // Les labels pointent vers l'intérieur pour ne pas déborder du SVG
+    const isLast  = ci === actorKeys.length - 1;
+    const labelX  = isLast ? cx - dotR - 10 : cx + dotR + 10;
+    const anchor  = isLast ? 'end' : 'start';
 
     if (isSubmit) {
       // Soumission : juste le mot "Soumission"
