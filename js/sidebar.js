@@ -122,7 +122,7 @@ function renderSidebar(id) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Notes libres
         </div>
-        <textarea class="quick-notes-textarea" id="quick-notes" placeholder="Idées, rappels, contexte informel, liens utiles…" oninput="autoResizeTA(this);scheduleQuickNotesSave('${id}')">${esc(d.notes||'')}</textarea>
+        <div contenteditable="true" class="quick-notes-textarea" id="quick-notes" data-placeholder="Idées, rappels, contexte informel, liens utiles…" oninput="scheduleQuickNotesSave('${id}')">${plainToRichHtml(d.notes||'')}</div>
       </div>
       <div class="quick-notes-hint" id="quick-notes-hint"></div>
     </div>
@@ -188,7 +188,7 @@ function renderSidebar(id) {
               <svg class="notes-block-chevron open" id="chev-${s.key}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
             <div class="notes-block-body" id="nbb-${s.key}">
-              <textarea class="notes-textarea" id="nt-${s.key}" placeholder="${s.placeholder}" oninput="autoResizeTA(this);scheduleNotesSave('${id}')">${esc(val)}</textarea>
+              <div contenteditable="true" class="notes-textarea" id="nt-${s.key}" data-placeholder="${s.placeholder}" oninput="scheduleNotesSave('${id}')">${plainToRichHtml(val)}</div>
             </div>
           </div>`;
         }).join('')}
@@ -215,7 +215,7 @@ function renderSidebar(id) {
   _actionLog = [...(d.actionLog || [])];
   renderActionLogSection(id);
 
-  // Auto-resize toutes les textareas après rendu
+  // Auto-resize les textareas restantes (meeting-notes uniquement — les notes/dossier sont des contenteditable)
   requestAnimationFrame(() => {
     _sidebarBodyEl.querySelectorAll('textarea').forEach(autoResizeTA);
   });
@@ -240,8 +240,8 @@ function toggleNotesBlock(key) {
   if (chev) chev.classList.toggle('open', !isOpen);
   if (!isOpen) {
     requestAnimationFrame(() => {
-      const ta = body.querySelector('textarea');
-      if (ta) autoResizeTA(ta);
+      const el = body.querySelector('[contenteditable]');
+      if (el) el.focus();
     });
   }
 }
@@ -253,7 +253,7 @@ function toggleNoteCheck(id, key) {
   const ns = {...d.notesStructured};
   NOTES_SECTIONS.forEach(s => {
     const el = document.getElementById(`nt-${s.key}`);
-    if (el) ns[s.key] = el.value;
+    if (el) ns[s.key] = el.innerHTML;
   });
   ns.checks = {...(ns.checks||{})};
   ns.checks[key] = !ns.checks[key];
@@ -270,7 +270,7 @@ function scheduleNotesSave(id) {
     const ns = {};
     NOTES_SECTIONS.forEach(s => {
       const el = document.getElementById(`nt-${s.key}`);
-      ns[s.key] = el ? el.value : '';
+      ns[s.key] = el ? el.innerHTML : '';
     });
     const raw = Store.getById(id);
     ns.checks = raw ? (Store._migrateDerog({...raw}).notesStructured?.checks || {}) : {};
@@ -294,7 +294,7 @@ function scheduleQuickNotesSave(id) {
   const hint = document.getElementById('quick-notes-hint');
   if (hint) { hint.textContent = 'En cours…'; hint.className = 'quick-notes-hint'; }
   quickNotesSaveTimer = setTimeout(() => {
-    const text = document.getElementById('quick-notes')?.value || '';
+    const text = document.getElementById('quick-notes')?.innerHTML || '';
     Store.updateNotes(id, text);
     const h2 = document.getElementById('quick-notes-hint');
     if (h2) { h2.textContent = '✓ Sauvegardé'; h2.className = 'quick-notes-hint saved'; }

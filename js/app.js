@@ -102,6 +102,7 @@ function init() {
     document.getElementById('today-chevron').classList.remove('open');
   }
   document.addEventListener('derogmanager:updated', renderAll);
+  document.addEventListener('keydown', richTextKeydown);
 
   // Chiffrement : délègue le démarrage à initCrypto()
   initCrypto(renderAll);

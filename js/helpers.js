@@ -124,6 +124,37 @@ function clipboardFallbackCopy(text, onSuccess, onError) {
 }
 
 /* LAST CHECK */
+/* ── RICH TEXT — Ctrl+B / Ctrl+I / Ctrl+U sur contenteditable ── */
+
+/**
+ * Convertit une chaîne brute en HTML pour initialiser un contenteditable.
+ * - Si la chaîne contient déjà des balises riches (<b>, <br>, …) : retournée telle quelle.
+ * - Sinon (plain text legacy) : échappe & < > et convertit \n → <br>.
+ */
+function plainToRichHtml(str) {
+  if (!str) return '';
+  if (/<(b|i|u|br|div|p)(>|\s)/i.test(str)) return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+/**
+ * Handler keydown global — intercepte Ctrl+B/I/U sur les éléments contenteditable.
+ * À attacher via document.addEventListener('keydown', richTextKeydown).
+ */
+function richTextKeydown(e) {
+  const el = document.activeElement;
+  if (!el || el.getAttribute('contenteditable') !== 'true') return;
+  if (!e.ctrlKey && !e.metaKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'b') { e.preventDefault(); document.execCommand('bold',      false, null); }
+  if (k === 'i') { e.preventDefault(); document.execCommand('italic',    false, null); }
+  if (k === 'u') { e.preventDefault(); document.execCommand('underline', false, null); }
+}
+
 function lastCheckClass(iso) {
   if (!iso) return 'last-check-none';
   const days = Math.floor((new Date() - new Date(iso)) / 86400000);

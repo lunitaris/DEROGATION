@@ -454,12 +454,13 @@ body {
   color: var(--text-primary);
   font-size: 13px;
   font-family: var(--font);
-  resize: none;
-  overflow-y: hidden;
   min-height: 70px;
   box-sizing: border-box;
   padding: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
+.tp-notes-ta:empty::before { content: attr(data-placeholder); color: var(--text-muted); opacity: 0.5; pointer-events: none; }
 .tp-notes-ta:focus { outline: none; }
 .tp-notes-hint {
   font-size: 11px;
@@ -613,12 +614,13 @@ body {
   color: var(--text-primary);
   font-size: 13px;
   font-family: var(--font);
-  resize: none;
-  overflow-y: hidden;
   min-height: 80px;
   box-sizing: border-box;
   padding: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
+.tp-notes-block-ta:empty::before { content: attr(data-placeholder); color: var(--text-muted); opacity: 0.4; pointer-events: none; }
 .tp-notes-block-ta:focus { outline: none; }
 
 /* ── COULEURS SÉMANTIQUES DU DOSSIER (mêmes que sidebar) ── */

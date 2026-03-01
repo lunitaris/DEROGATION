@@ -10,6 +10,9 @@ function initTicketPage() {
   const prefs = Store.loadPrefs();
   if (prefs.theme) document.documentElement.setAttribute('data-theme', prefs.theme);
 
+  /* Raccourcis Ctrl+B/I/U sur les champs rich text */
+  document.addEventListener('keydown', richTextKeydown);
+
   /* Chiffrement : hérite la clé de l'onglet parent si possible */
   _initTicketCrypto(_loadTicketById);
 }
@@ -196,11 +199,10 @@ function renderQuickNotes(d) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         </button>
       </div>
-      <textarea class="tp-notes-ta"
-        data-no-autoresize
-        placeholder="Notes rapides, post-it…"
+      <div contenteditable="true" class="tp-notes-ta"
+        data-placeholder="Notes rapides, post-it…"
         oninput="tpScheduleNotesSave()"
-        >${esc(d.notes || '')}</textarea>
+        >${plainToRichHtml(d.notes || '')}</div>
       <div class="tp-notes-hint" id="tp-notes-hint">✓ Sauvegardé</div>
     </div>`;
 }
@@ -288,10 +290,10 @@ function renderDossier(d) {
           </svg>
         </div>
         <div class="tp-notes-block-body open" id="tp-nb-body-${s.key}">
-          <textarea class="tp-notes-block-ta" id="tp-nb-ta-${s.key}"
-            placeholder="${s.label}…"
-            oninput="autoResizeTA(this); tpScheduleDossierSave('${s.key}')"
-            >${esc(content)}</textarea>
+          <div contenteditable="true" class="tp-notes-block-ta" id="tp-nb-ta-${s.key}"
+            data-placeholder="${s.label}…"
+            oninput="tpScheduleDossierSave('${s.key}')"
+            >${plainToRichHtml(content)}</div>
           <div class="tp-save-hint" id="tp-dossier-hint-${s.key}" style="margin-top:4px">✓ Sauvegardé</div>
         </div>
       </div>`;

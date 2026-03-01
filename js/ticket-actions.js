@@ -76,7 +76,7 @@ function tpScheduleNotesSave() {
   tp_notesSaveTimer = setTimeout(() => {
     if (!tp_currentId) return;
     const ta = document.querySelector('.tp-notes-ta');
-    const text = ta?.value || '';
+    const text = ta?.innerHTML || '';
     Store.updateNotes(tp_currentId, text);
     tpHint('tp-notes-hint');
   }, 800);
@@ -201,8 +201,8 @@ function tpToggleNoteBlock(key) {
   const open = body.classList.toggle('open');
   if (chevron) chevron.classList.toggle('open', open);
   if (open) {
-    const ta = body.querySelector('textarea');
-    if (ta) requestAnimationFrame(() => autoResizeTA(ta));
+    const el = body.querySelector('[contenteditable]');
+    if (el) requestAnimationFrame(() => el.focus());
   }
 }
 
@@ -219,7 +219,7 @@ function tpScheduleDossierSave(key) {
     /* Lire toutes les sections */
     NOTES_SECTIONS.forEach(s => {
       const ta = document.getElementById('tp-nb-ta-' + s.key);
-      if (ta) ns[s.key] = ta.value;
+      if (ta) ns[s.key] = ta.innerHTML;
     });
     Store.updateNotesStructured(tp_currentId, ns);
     tpHint('tp-dossier-hint-' + key);
@@ -355,7 +355,7 @@ function tpOpenExpandModal(type) {
     if (title) title.textContent = '📝 Notes';
     ta.placeholder = 'Notes rapides, post-it, idées, contexte informel…';
     const src = document.querySelector('.tp-notes-ta');
-    ta.value = src ? src.value : '';
+    ta.value = src ? src.innerText : '';
   }
 
   /* Reset hint */
@@ -404,8 +404,8 @@ function _tpFlushExpand() {
     tpHint('tp-meeting-hint');
   } else {
     const src = document.querySelector('.tp-notes-ta');
-    if (src) { src.value = val; requestAnimationFrame(() => autoResizeTA(src)); }
-    Store.updateNotes(tp_currentId, val);
+    if (src) src.innerHTML = plainToRichHtml(val);
+    Store.updateNotes(tp_currentId, plainToRichHtml(val));
     tpHint('tp-notes-hint');
   }
 }

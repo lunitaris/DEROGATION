@@ -75,4 +75,8 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 input, select, textarea { font-family: var(--font); font-size: 14px; color: var(--text-primary); background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 12px; outline: none; transition: border-color var(--transition); width: 100%; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
 a { color: var(--accent); text-decoration: none; }
+/* Rich text dans les champs contenteditable */
+[contenteditable] b, [contenteditable] strong { font-weight: 700; }
+[contenteditable] i, [contenteditable] em { font-style: italic; }
+[contenteditable] u { text-decoration: underline; }
 select option { background: var(--bg-elevated); }
