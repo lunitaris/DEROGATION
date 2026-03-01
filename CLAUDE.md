@@ -25,14 +25,14 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
 └── js/
     ├── constants.js        (STATUS_LABELS, ACTION_LABELS, MOTIF_LABELS, NOTES_SECTIONS, DIC_LABELS, ACTORS, ETYPES)
     ├── store.js            (Store object — load/save/create/update/migrate/delete/prefs)
-    ├── helpers.js          (formatDate, daysUntil, badges, esc, autoResizeTA, lastCheck*)
+    ├── helpers.js          (formatDate, daysUntil, badges, esc, autoResizeTA, lastCheck*, sortedActionLogIndices, clipboardFallbackCopy)
     ├── filters.js          (UI state, getFiltered, applyFilters, renderStats, renderCards, renderAll…)
     ├── sidebar.js          (openSidebar, renderSidebar, quickUpdate, autosave, renderActionLogSection)
     ├── pilotage.js         (renderPilotage, setPilotageSort — colonne ↗ plein écran)
     ├── modal-derog.js      (openNewModal, openEditModal, saveDerogation, confirmDelete, openModal…)
-    ├── modal-email.js      (EMAIL_TEMPLATES, openEmailModal, copyEmail)
+    ├── modal-email.js      (openEmailModal, copyEmail — EMAIL_TEMPLATES déplacé dans render-shared.js)
     ├── modal-crypto.js     (openCryptoModal, _submitCryptoModal — modal mot de passe partagé index+ticket)
-    ├── render-shared.js    (sharedIndicatorsHtml — partagé index+ticket)
+    ├── render-shared.js    (sharedIndicatorsHtml, sharedLastActionHtml, EMAIL_TEMPLATES — partagés index+ticket)
     ├── app.js              (toggleTheme, exportData, importData, showDataError, openFullscreen, keydown, search, init, initCrypto)
     ├── ticket-actions.js   (tp_ — autosave & interactions pour ticket.html)
     ├── ticket-timeline.js  (tpRenderTimeline, tooltip SVG — ticket.html only)
@@ -322,6 +322,8 @@ Règles implicites à respecter dans **tout** nouveau code :
 
 ### Fonctions dans render-shared.js (partagées sidebar ↔ ticket)
 - `sharedIndicatorsHtml(risk, ns)` → HTML du bloc Indicateurs (Mitigations, Plan d'action, Exposé internet, DIC). Classes CSS générées : `risk-ind-list`, `risk-ind-row`, `risk-ind-label`, `risk-ind-yes`, `risk-ind-no`, `risk-ind-na`, `risk-ind-warn`. Appelée depuis `renderRiskProfile()` (ticket.js) et `renderSidebar()` (sidebar.js).
+- `sharedLastActionHtml(actionLog)` → HTML du bloc "Dernière action journal" (carte résumé : actor, etype, texte tronqué 80c, état vide). Appelée depuis `renderSidebar()` (sidebar.js) et `renderLifecycle()` (ticket.js).
+- `EMAIL_TEMPLATES` → objet `{ followup, status, expiry }`, chaque clé est `(d) => { label, subject, body }`. Utilisé par `modal-email.js` (index.html) et `ticket-actions.js` (ticket.html). ⚠️ Les boutons de `ticket.html` appellent `tpCopyEmail('info')` — le type `'info'` est mappé vers `'followup'` dans `tpCopyEmail()`.
 
 ### Fonctions dans ticket-actions.js (préfixe `tp_`)
 - `tpClearMeetingNotes()` — vide + masque l'encart réunion
@@ -339,7 +341,7 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `tpToggleNoteCheck(key)` — toggle checkbox OK section dossier
 - `tpMarkCheckedNow()` — `Store.update({lastCheckedAt: now})`
 - `tpConfirmDelete()` — dialog confirm → `Store.delete` → `window.location.href='index.html'`
-- `tpCopyEmail(type)` — copie email dans presse-papiers (types: info, status, expiry) — implémentation locale dans ticket-actions.js (modal-email.js n'est pas chargé dans ticket.html)
+- `tpCopyEmail(type)` — copie email dans presse-papiers (types: `info`, `status`, `expiry`) — utilise `EMAIL_TEMPLATES` de render-shared.js ; `'info'` est mappé vers la clé `'followup'` d'EMAIL_TEMPLATES
 - `tpShowToast(msg)` — toast 2.5s en bas de page
 
 ### Fonctions dans ticket-timeline.js
@@ -364,9 +366,9 @@ Deux mécanismes dans `_loadTicketById` :
 2. `window.addEventListener('focus', ...)` — re-render quand ticket.html reprend le focus **(compensate pour la peu fiabilité des storage events en `file://`)**
 
 ### Journal d'actions — tri chronologique
-- **Ticket plein écran** : tri **décroissant** — `_tpSortedJournalIndices()` → `db.localeCompare(da)` (plus récent en haut)
-- **Sidebar** : tri **croissant** — `_sortedActionLogIndices()` → `da.localeCompare(db)` (les 4 plus récentes = fin de liste, collapse = tranche finale)
-- Les entrées **sans date** apparaissent en fin de liste dans les deux cas
+- **Les deux vues** trient **décroissant** via `sortedActionLogIndices(log)` (helpers.js) — `db.localeCompare(da)`, sans date → fin de liste
+- Sidebar : collapse = les 4 premières entrées du tri desc (= les 4 plus récentes) ; bouton "▼ N plus anciennes" pour étendre
+- `_sortedActionLogIndices()` (sidebar) et `_tpSortedJournalIndices()` (ticket) délèguent tous les deux à `sortedActionLogIndices(log)`
 - Le tableau `tp_journal` (plein écran) et `_actionLog` (sidebar) conservent l'ordre d'insertion ; seul le rendu est trié
 - Technique : chaque ligne DOM reçoit `data-real-idx="${realIdx}"` ; tous les onclick passent le vrai index du tableau
 - Quand une date est modifiée (`onchange`), `tpRenderJournal()` est appelé pour re-trier

@@ -320,39 +320,7 @@ function renderLifecycle(d) {
   const lcCls    = lastCheckClass(dates.lastCheckedAt);
   const lcSuffix = lastCheckSuffix(dates.lastCheckedAt);
 
-  /* ── Dernière action du journal (la plus récente par date) ── */
-  const actionLog = d.actionLog || [];
-  let lastActionHtml = '';
-  if (actionLog.length > 0) {
-    const la    = [...actionLog].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-    const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
-    const et    = ETYPES[la.etype || 'commentaire'] || ETYPES.commentaire;
-    const laText = la.text
-      ? (la.text.length > 80 ? la.text.substring(0, 80) + '…' : la.text)
-      : '';
-    lastActionHtml = `
-        <div class="tp-lastaction-row">
-          <div class="tp-lastaction-header">
-            <span class="lc-label">Dernière action journal</span>
-            <span class="lc-label tp-lastaction-date">${formatDate(la.date)}</span>
-          </div>
-          <div class="tp-lastaction-body">
-            <span class="tp-lastaction-meta">
-              <span style="color:${actor.color}">${actor.emoji} ${actor.label}</span>
-              <span style="color:${et.color}">${et.emoji} ${et.label}</span>
-            </span>
-            ${laText ? `<span class="tp-lastaction-text">${esc(laText)}</span>` : ''}
-          </div>
-        </div>`;
-  } else {
-    lastActionHtml = `
-        <div class="tp-lastaction-row">
-          <div class="tp-lastaction-header">
-            <span class="lc-label">Dernière action journal</span>
-          </div>
-          <div class="lc-val muted">—</div>
-        </div>`;
-  }
+  const lastActionHtml = sharedLastActionHtml(d.actionLog);
 
   el.innerHTML = `
     <div class="tp-summary-col-title">Cycle de vie</div>

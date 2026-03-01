@@ -77,6 +77,52 @@ function autoResizeTA(el) {
   el.style.height = el.scrollHeight + 'px';
 }
 
+/* ACTION LOG — TRI & PRESSE-PAPIERS */
+
+/**
+ * Retourne les indices d'un tableau actionLog triés par date décroissante.
+ * Les entrées sans date apparaissent en fin de liste.
+ * Utilisé par sidebar.js et ticket-actions.js.
+ *
+ * @param {Array} log — tableau d'entrées { date, text, actor, etype }
+ * @returns {number[]} indices triés
+ */
+function sortedActionLogIndices(log) {
+  return log
+    .map((_, i) => i)
+    .sort((a, b) => {
+      const da = log[a].date || '';
+      const db = log[b].date || '';
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return db.localeCompare(da); /* décroissant — plus récent en premier */
+    });
+}
+
+/**
+ * Copie du texte dans le presse-papiers via execCommand (fallback).
+ * Appelé quand l'API navigator.clipboard n'est pas disponible ou échoue.
+ *
+ * @param {string}   text      — texte à copier
+ * @param {Function} onSuccess — callback appelé si la copie réussit
+ * @param {Function} onError   — callback appelé si la copie échoue
+ */
+function clipboardFallbackCopy(text, onSuccess, onError) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    if (onSuccess) onSuccess();
+  } catch {
+    if (onError) onError();
+  }
+  document.body.removeChild(ta);
+}
+
 /* LAST CHECK */
 function lastCheckClass(iso) {
   if (!iso) return 'last-check-none';

@@ -87,16 +87,7 @@ function tpScheduleNotesSave() {
 ================================================================ */
 /* Retourne les indices de tp_journal triés par date décroissante (plus récent → plus ancien) */
 function _tpSortedJournalIndices() {
-  return tp_journal
-    .map((_, i) => i)
-    .sort((a, b) => {
-      const da = tp_journal[a].date || '';
-      const db = tp_journal[b].date || '';
-      if (!da && !db) return 0;
-      if (!da) return 1;  /* sans date → fin de liste */
-      if (!db) return -1;
-      return db.localeCompare(da); /* décroissant */
-    });
+  return sortedActionLogIndices(tp_journal);
 }
 
 /* Génère les <option> pour le select acteur */
@@ -316,30 +307,9 @@ function tpCopyEmail(type) {
   if (!tp_currentId) return;
   const d = Store._migrateDerog({ ...Store.getById(tp_currentId) });
   if (!d) return;
-
-  const ticket  = d.ticketId || '(sans ticket)';
-  const title   = d.title || '(sans titre)';
-  const expires = d.dates?.expiresAt ? formatDate(d.dates.expiresAt) : 'non définie';
-  const name    = d.applicant?.name || '';
-
-  const templates = {
-    info: {
-      label: 'Relance info',
-      subject: `[Dérogation SSI] Informations manquantes — ${ticket}`,
-      body: `Bonjour${name ? ' ' + name : ''},\n\nJe reviens vers vous concernant la demande de dérogation « ${title} » (${ticket}).\n\nAfin de poursuivre l'instruction, je souhaite obtenir les informations suivantes :\n[À préciser]\n\nMerci de me revenir dans les meilleurs délais.\n\nCordialement`
-    },
-    status: {
-      label: 'Point statut',
-      subject: `[Dérogation SSI] Point d'avancement — ${ticket}`,
-      body: `Bonjour${name ? ' ' + name : ''},\n\nJe vous contacte pour faire un point sur la dérogation « ${title} » (${ticket}).\n\nPouvez-vous m'indiquer l'état d'avancement des actions prévues ?\n\nMerci,\nCordialement`
-    },
-    expiry: {
-      label: 'Alerte expiration',
-      subject: `[Dérogation SSI] Expiration imminente — ${ticket}`,
-      body: `Bonjour${name ? ' ' + name : ''},\n\nJe vous informe que la dérogation « ${title} » (${ticket}) arrive à expiration le ${expires}.\n\nSi vous souhaitez renouveler cette dérogation, merci de me transmettre un dossier de renouvellement dès que possible.\n\nCordialement`
-    }
-  };
-  const tpl = templates[type];
+  /* 'info' (bouton HTML) correspond à 'followup' dans EMAIL_TEMPLATES */
+  const templateKey = type === 'info' ? 'followup' : type;
+  const tpl = EMAIL_TEMPLATES[templateKey]?.(d);
   if (!tpl) return;
   const full = `Objet : ${tpl.subject}\n\n${tpl.body}`;
   tpCopyToClipboard(full, `Email « ${tpl.label} » copié !`);
@@ -357,18 +327,11 @@ function tpCopyToClipboard(text, successMsg) {
 }
 
 function tpFallbackCopy(text, successMsg) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-    tpShowToast(successMsg || '✓ Copié !');
-  } catch {
-    tpShowToast('⚠ Impossible de copier');
-  }
-  document.body.removeChild(ta);
+  clipboardFallbackCopy(
+    text,
+    () => tpShowToast(successMsg || '✓ Copié !'),
+    () => tpShowToast('⚠ Impossible de copier')
+  );
 }
 
 /* ================================================================

@@ -100,34 +100,7 @@ function renderSidebar(id) {
           <span class="lc-label">Next date clé</span>
           <input type="date" class="lc-date-input ${followupDays!==null&&followupDays<0?'expiry-past':''}" value="${toDateInputVal(d.dates.nextFollowup)}" onchange="quickUpdateDate('${id}','nextFollowup',this.value)">
         </div>
-        ${(() => {
-          const log = d.actionLog || [];
-          if (!log.length) return `
-        <div class="tp-lastaction-row">
-          <div class="tp-lastaction-header">
-            <span class="lc-label">Dernière action journal</span>
-          </div>
-          <span class="lc-val muted">—</span>
-        </div>`;
-          const la = [...log].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-          const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
-          const et    = ETYPES[la.etype || 'commentaire'] || ETYPES.commentaire;
-          const laText = la.text ? (la.text.length > 80 ? la.text.substring(0, 80) + '…' : la.text) : '';
-          return `
-        <div class="tp-lastaction-row">
-          <div class="tp-lastaction-header">
-            <span class="lc-label">Dernière action journal</span>
-            <span class="lc-label tp-lastaction-date">${la.date ? formatDate(la.date) : '—'}</span>
-          </div>
-          <div class="tp-lastaction-body">
-            <span class="tp-lastaction-meta">
-              <span style="color:${actor.color}">${actor.emoji} ${actor.label}</span>
-              <span style="color:${et.color}">${et.emoji} ${et.label}</span>
-            </span>
-            ${laText ? `<span class="tp-lastaction-text">${esc(laText)}</span>` : ''}
-          </div>
-        </div>`;
-        })()}
+        ${sharedLastActionHtml(d.actionLog)}
       </div>
     </div>
 
@@ -380,18 +353,9 @@ function scheduleMeetingNotesSave(id) {
 }
 
 /* JOURNAL D'ACTIONS — rendu, ajout, mise à jour, toggle */
-/* Retourne les indices de _actionLog triés par date croissante (sans date → fin) */
+/* Retourne les indices de _actionLog triés par date décroissante (sans date → fin) */
 function _sortedActionLogIndices() {
-  return _actionLog
-    .map((_, i) => i)
-    .sort((a, b) => {
-      const da = _actionLog[a].date || '';
-      const db = _actionLog[b].date || '';
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return db.localeCompare(da); /* décroissant */
-    });
+  return sortedActionLogIndices(_actionLog);
 }
 
 function renderActionLogSection(id) {
