@@ -60,6 +60,7 @@ const ACTORS = {
 const ETYPES = {
   soumission:  { id: 'soumission',  label: 'Soumission',        emoji: '📤', color: '#f59e42', triggersStatus: 'soumis'     },
   question:    { id: 'question',    label: 'Demande d\'infos',  emoji: '❓', color: '#42a5f5', triggersStatus: 'en_attente' },
+  relance:     { id: 'relance',     label: 'Relance',           emoji: '🔄', color: '#f59e42', triggersStatus: null         },
   reponse:     { id: 'reponse',     label: 'Réponse',           emoji: '💬', color: '#f59e42', triggersStatus: 'analyse'    },
   validation:  { id: 'validation',  label: 'Validation',        emoji: '✅', color: '#66bb6a', triggersStatus: 'valide'     },
   escalade:     { id: 'escalade',     label: 'Review',         emoji: '⭐', color: '#ab47bc', triggersStatus: 'escalade'   },
@@ -67,7 +68,8 @@ const ETYPES = {
   acceptation:  { id: 'acceptation',  label: 'Acceptation',    emoji: '🎉', color: '#66bb6a', triggersStatus: 'accepte'    },
   refus:       { id: 'refus',       label: 'Refus',             emoji: '❌', color: '#ef5350', triggersStatus: 'refuse'     },
   complement:  { id: 'complement',  label: 'Complément',        emoji: '📎', color: '#ffd54f', triggersStatus: null         },
-  commentaire: { id: 'commentaire', label: 'Commentaire',       emoji: '💡', color: '#78909c', triggersStatus: null         }
+  commentaire: { id: 'commentaire', label: 'Commentaire',       emoji: '💡', color: '#78909c', triggersStatus: null         },
+  reunion:     { id: 'reunion',     label: 'Réunion',           emoji: '📅', color: '#8b5cf6', triggersStatus: null         }
 };
 
 

@@ -162,6 +162,7 @@ function renderIdentityStrip(d) {
         ${statusBadge(d.status)}
         ${actionBadge(d.actionStatus)}
         ${d.actionMotif && d.actionStatus === 'attente_demandeur' ? motifBadge(d) : ''}
+        ${reviewDateTagHtml(d.actionLog)}
       </div>
       <div class="tp-id-sep"></div>
       <div class="tp-id-meta">
@@ -288,6 +289,16 @@ function renderJournalShell(d) {
           <span class="tp-j-quality-label">Qualité :</span>
           <button class="tp-quality-btn incomplet active" onclick="tpSetFormQuality('incomplet')">⚠️ Incomplet</button>
           <button class="tp-quality-btn complet" onclick="tpSetFormQuality('complet')">✅ Complet</button>
+        </div>
+        <div id="tp-j-meeting-status" class="tp-j-ms-row" style="display:none">
+          <span class="tp-j-quality-label">Statut :</span>
+          <button class="tp-ms-btn active" data-ms="planned" onclick="tpSetFormMeetingStatus('planned')">📅 Planifiée</button>
+          <button class="tp-ms-btn" data-ms="held" onclick="tpSetFormMeetingStatus('held')">✅ Tenue</button>
+          <button class="tp-ms-btn" data-ms="cancelled" onclick="tpSetFormMeetingStatus('cancelled')">✗ Annulée</button>
+        </div>
+        <div id="tp-j-review-date" class="tp-j-rd-row" style="display:none">
+          <span class="tp-j-quality-label">Date review :</span>
+          <input type="date" id="tp-j-review-date-input" class="tp-j-rd-input">
         </div>
         <textarea id="tp-j-message" class="tp-j-message"
           placeholder="Décrivez l'action ou la décision\u2026"

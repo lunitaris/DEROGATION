@@ -126,8 +126,25 @@ function tpRenderJournal() {
           <button class="tp-quality-btn complet${quality === 'complet' ? ' active' : ''}"
             onclick="tpUpdateJournalQuality(${realIdx},'complet')" title="Réponse complète">✅</button>
         </div>` : '';
+    /* Boutons statut réunion */
+    const isReunion = entry.etype === 'reunion';
+    const ms = entry.meetingStatus || 'planned';
+    const msBtns = isReunion ? `
+        <div class="tp-jrow-ms">
+          <button class="tp-ms-btn${ms === 'planned'   ? ' active' : ''}" data-ms="planned"   onclick="tpUpdateMeetingStatus(${realIdx},'planned')"   title="Planifiée">📅</button>
+          <button class="tp-ms-btn${ms === 'held'      ? ' active' : ''}" data-ms="held"      onclick="tpUpdateMeetingStatus(${realIdx},'held')"      title="Tenue">✅</button>
+          <button class="tp-ms-btn${ms === 'cancelled' ? ' active' : ''}" data-ms="cancelled" onclick="tpUpdateMeetingStatus(${realIdx},'cancelled')" title="Annulée">✗</button>
+        </div>` : '';
+    /* Chip review date pour escalade */
+    const isEscaladeTeam = entry.etype === 'escalade' && (entry.actor || 'team') === 'team';
+    const rdChip = isEscaladeTeam ? `
+        <div class="tp-jrow-rd">
+          <span class="tp-j-quality-label" style="font-size:10px">Review&nbsp;:</span>
+          <input type="date" class="tp-j-rd-input tp-jrow-rd-input" value="${entry.reviewDate || ''}"
+            onchange="tpUpdateReviewDate(${realIdx},this.value)">
+        </div>` : '';
     return `
-    <div class="tp-jrow" data-real-idx="${realIdx}">
+    <div class="tp-jrow${isReunion ? ' tp-jrow-reunion' : ''}" data-real-idx="${realIdx}">
       <div class="tp-jrow-meta">
         <input type="date" class="action-log-date"
           value="${entry.date || ''}"
@@ -140,10 +157,12 @@ function tpRenderJournal() {
           ${_tpEtypeOptions(entry.etype || 'commentaire')}
         </select>
         ${qBtns}
+        ${msBtns}
         <button class="action-log-btn-remove" onclick="tpRemoveJournalEntry(${realIdx})" title="Supprimer cette entrée">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+      ${rdChip}
       <input type="text" class="action-log-text"
         value="${esc(entry.text || '')}"
         placeholder="Action, décision, échange…"
@@ -179,12 +198,33 @@ function tpAddJournalEntry() {
     const activeBtn = document.querySelector('#tp-j-quality .tp-quality-btn.active');
     quality = activeBtn?.classList.contains('complet') ? 'complet' : 'incomplet';
   }
+  /* MeetingStatus — uniquement si réunion */
+  let meetingStatus = null;
+  if (etype === 'reunion') {
+    const activeMs = document.querySelector('#tp-j-meeting-status .tp-ms-btn.active');
+    meetingStatus = activeMs?.dataset.ms || 'planned';
+  }
+  /* ReviewDate — uniquement si escalade par team */
+  let reviewDate = null;
+  if (etype === 'escalade' && actor === 'team') {
+    const rdVal = document.getElementById('tp-j-review-date-input')?.value || '';
+    if (rdVal) reviewDate = rdVal;
+  }
   if (msgEl) { msgEl.style.borderColor = ''; msgEl.value = ''; }
   /* Réinitialiser le formulaire qualité sur défaut incomplet */
   tpSetFormQuality('incomplet');
+  /* Réinitialiser meeting status sur défaut planned */
+  tpSetFormMeetingStatus('planned');
+  /* Réinitialiser review date */
+  const rdInput = document.getElementById('tp-j-review-date-input');
+  if (rdInput) rdInput.value = '';
   /* Réinitialiser les groupes car la structure peut changer */
   _tpGroupExpanded = {};
-  tp_journal.push({ date, text: message, actor, etype, quality });
+  const newEntry = { date, text: message, actor, etype };
+  if (quality       !== null) newEntry.quality       = quality;
+  if (meetingStatus !== null) newEntry.meetingStatus = meetingStatus;
+  if (reviewDate)             newEntry.reviewDate    = reviewDate;
+  tp_journal.push(newEntry);
   tpSaveJournal();
   tpRenderJournal();
   /* AMELIORATION3 — si on vient d'ajouter une soumission, sync "Créé le" */
@@ -235,7 +275,13 @@ function tpOnJFormChange() {
   const actor = document.getElementById('tp-j-actor')?.value || 'team';
   const etype = document.getElementById('tp-j-etype')?.value || 'commentaire';
   const qDiv  = document.getElementById('tp-j-quality');
-  if (qDiv) qDiv.style.display = (actor === 'demandeur' && etype === 'reponse') ? 'flex' : 'none';
+  const msDiv = document.getElementById('tp-j-meeting-status');
+  const rdDiv = document.getElementById('tp-j-review-date');
+  if (qDiv)  qDiv.style.display  = (actor === 'demandeur' && etype === 'reponse')  ? 'flex' : 'none';
+  if (msDiv) msDiv.style.display = (etype === 'reunion')                           ? 'flex' : 'none';
+  if (rdDiv) rdDiv.style.display = (etype === 'escalade' && actor === 'team')      ? 'flex' : 'none';
+  /* Pré-sélectionner "planned" quand on sélectionne réunion */
+  if (etype === 'reunion') tpSetFormMeetingStatus('planned');
 }
 
 /**
@@ -248,6 +294,15 @@ function tpSetFormQuality(val) {
 }
 
 /**
+ * Sélectionne le statut réunion dans le formulaire d'ajout.
+ */
+function tpSetFormMeetingStatus(val) {
+  document.querySelectorAll('#tp-j-meeting-status .tp-ms-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.ms === val);
+  });
+}
+
+/**
  * Met à jour la qualité d'une entrée existante du journal.
  */
 function tpUpdateJournalQuality(realIdx, val) {
@@ -255,6 +310,27 @@ function tpUpdateJournalQuality(realIdx, val) {
   tp_journal[realIdx].quality = val;
   tpSaveJournal();
   tpRenderJournal();
+}
+
+/**
+ * Met à jour le statut d'une entrée réunion existante (planned / held / cancelled).
+ */
+function tpUpdateMeetingStatus(realIdx, val) {
+  if (realIdx < 0 || realIdx >= tp_journal.length) return;
+  tp_journal[realIdx].meetingStatus = val;
+  tpSaveJournal();
+  tpRenderJournal();
+}
+
+/**
+ * Met à jour la reviewDate d'une entrée escalade existante.
+ */
+function tpUpdateReviewDate(realIdx, val) {
+  if (realIdx < 0 || realIdx >= tp_journal.length) return;
+  tp_journal[realIdx].reviewDate = val || null;
+  tpSaveJournal();
+  /* Re-render timeline uniquement pour mettre à jour le milestone */
+  tpRenderTimeline(tp_journal);
 }
 
 /* ================================================================

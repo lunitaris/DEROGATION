@@ -14,7 +14,7 @@ function tpGetTip() {
 let _tpGroupExpanded = {};  /* { 'g-N': true|false } */
 
 /* ── Etypes qui constituent un échange ── */
-const _TP_EXCHANGE_ETYPES = new Set(['question', 'reponse', 'complement']);
+const _TP_EXCHANGE_ETYPES = new Set(['question', 'relance', 'reponse', 'complement']);
 
 /* Toggle expand/collapse d'un groupe — appelé depuis les onclick SVG */
 function tpToggleGroup(gid) {
@@ -131,8 +131,9 @@ function _tpBallInCourt(entry) {
 
     case 'demande_info':
     case 'question':
+    case 'relance':
       if (actor === 'demandeur') return 'team';
-      return 'demandeur';  /* team pose une question → demandeur doit répondre */
+      return 'demandeur';  /* team pose une question / relance → demandeur doit répondre */
 
     case 'reponse_info':
     case 'reponse':
@@ -146,10 +147,68 @@ function _tpBallInCourt(entry) {
     case 'final_review':    return 'team';  /* final review → segment ambre */
     case 'validation':      return null;
     case 'refus':           return null;
+    case 'reunion': {
+      const ms = entry.meetingStatus || 'planned';
+      if (ms === 'planned') return null;  /* réunion à venir → pas de ball */
+      return 'team';  /* tenue ou annulée → team reprend */
+    }
     default:                return 'team';
   }
 }
 
+
+/* ================================================================
+   HELPERS — reviewDate milestone
+================================================================ */
+
+/**
+ * Retourne la reviewDate active (string YYYY-MM-DD) ou null.
+ * Même logique que reviewDateTagHtml() dans render-shared.js.
+ */
+function _tpFindActiveReviewDate(entries) {
+  const log = entries || [];
+  const candidates = log.filter(e => e.etype === 'escalade' && e.actor === 'team' && e.reviewDate);
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const last = candidates[0];
+  const hasFinalReview = log.some(
+    e => e.etype === 'final_review' && (e.date || '') >= (last.date || '')
+  );
+  return hasFinalReview ? null : last.reviewDate;
+}
+
+/**
+ * Calcule la position Y du milestone reviewDate dans le SVG.
+ * Si reviewDate est entre deux entrées : interpolation linéaire.
+ * Si reviewDate est après toutes les entrées : après la ligne today.
+ * Si reviewDate est avant toutes les entrées : avant la première entrée.
+ */
+function _tpComputeMilestoneY(reviewDate, sortedEntries, padTop, spacingY, todayY, itemCount) {
+  if (!reviewDate) return null;
+  const dates = sortedEntries.map(e => (e.date || '').slice(0, 10));
+  if (dates.length === 0) return padTop + 50;
+
+  /* Avant toutes les entrées */
+  if (reviewDate <= dates[0]) return padTop - spacingY / 2;
+
+  /* Après toutes les entrées */
+  if (reviewDate >= dates[dates.length - 1]) {
+    const base = padTop + (itemCount - 1) * spacingY;
+    return todayY !== null ? todayY + 50 : base + 50;
+  }
+
+  /* Entre deux entrées — interpolation */
+  for (let i = 0; i < dates.length - 1; i++) {
+    if (reviewDate >= dates[i] && reviewDate <= dates[i + 1]) {
+      const d0 = parseInt(dates[i].replace(/-/g, ''), 10);
+      const d1 = parseInt(dates[i + 1].replace(/-/g, ''), 10);
+      const dr = parseInt(reviewDate.replace(/-/g, ''), 10);
+      const t  = d1 > d0 ? (dr - d0) / (d1 - d0) : 0.5;
+      return padTop + (i + t) * spacingY;
+    }
+  }
+  return padTop + (itemCount - 1) * spacingY + 50;
+}
 
 /* ================================================================
    RENDER PRINCIPAL
@@ -252,8 +311,18 @@ function tpRenderTimeline(entries) {
   });
   headerHtml += '</div>';
 
+  /* ── Milestone reviewDate — calculé avant svgH pour ajuster la hauteur ── */
+  const _activeReviewDate  = _tpFindActiveReviewDate(entries);
+  const reviewMilestoneY   = _activeReviewDate
+    ? _tpComputeMilestoneY(_activeReviewDate, sorted, padTop, spacingY, todayY, items.length)
+    : null;
+
   /* ── SVG ── */
-  const svgH = todayY && todayY + 40 > totalH ? todayY + 40 : totalH;
+  const _milestoneSvgH = reviewMilestoneY !== null ? reviewMilestoneY + 30 : 0;
+  const svgH = Math.max(
+    todayY && todayY + 40 > totalH ? todayY + 40 : totalH,
+    _milestoneSvgH
+  );
   let svg = `<svg width="${totalW}" height="${svgH}" style="display:block;overflow:visible">`;
 
   /* Defs */
@@ -331,11 +400,12 @@ function tpRenderTimeline(entries) {
     const item1 = items[i];
     const item2 = items[i + 1];
 
-    /* x1 source */
+    /* x1 source — les réunions sont centrées */
     let x1, srcColor;
     if (item1.type === 'entry') {
-      x1 = actorX[item1.entry.actor || 'team'];
-      srcColor = (ACTORS[item1.entry.actor || 'team']?.color) || '#78909c';
+      x1 = (item1.entry.etype === 'reunion') ? centerX : actorX[item1.entry.actor || 'team'];
+      srcColor = (item1.entry.etype === 'reunion') ? '#8b5cf6'
+               : (ACTORS[item1.entry.actor || 'team']?.color) || '#78909c';
     } else if (item1.type === 'group') {
       x1 = centerX;
       srcColor = '#78909c';
@@ -343,10 +413,10 @@ function tpRenderTimeline(entries) {
       continue;  /* group-collapse → pas de flèche depuis */
     }
 
-    /* x2 destination */
+    /* x2 destination — les réunions sont centrées */
     let x2;
     if (item2.type === 'entry') {
-      x2 = actorX[item2.entry.actor || 'team'];
+      x2 = (item2.entry.etype === 'reunion') ? centerX : actorX[item2.entry.actor || 'team'];
     } else if (item2.type === 'group' || item2.type === 'group-collapse') {
       x2 = centerX;
     } else {
@@ -373,8 +443,68 @@ function tpRenderTimeline(entries) {
   items.forEach((item, i) => {
     const cy = padTop + yPositions[i];
 
+    /* ── Entrée réunion : 2 bulles reliées ── */
+    if (item.type === 'entry' && item.entry.etype === 'reunion') {
+      const entry = item.entry;
+      const ms    = entry.meetingStatus || 'planned';
+      const xTeam = actorX['team']      !== undefined ? actorX['team']      : actorX[actorKeys[0]];
+      const xDem  = actorX['demandeur'] !== undefined ? actorX['demandeur'] : actorX[actorKeys[actorKeys.length - 1]];
+      const dateLabel = _tpFormatDateShort(entry.date);
+      const snippet   = _tpTruncate(entry.text || '', 22);
+
+      const dotColor = ms === 'held'      ? '#3FB950'
+                     : ms === 'cancelled' ? '#ef5350'
+                     : '#8b5cf6';
+      const dotOpacity   = ms === 'planned' ? 0.55 : 1;
+      const dashArray    = ms === 'planned' ? 'stroke-dasharray="3,2"' : '';
+      const fillStyle    = ms === 'planned' ? 'none' : dotColor;
+      const strokeStyle  = dotColor;
+
+      svg += `<g class="tl-point-group tl-reunion-group" style="--tl-delay:${i * 60}ms">`;
+
+      /* Halo large centré */
+      svg += `<rect x="${Math.min(xTeam, xDem) - dotR - 8}" y="${cy - dotR - 8}"` +
+             ` width="${Math.abs(xTeam - xDem) + (dotR + 8) * 2}" height="${(dotR + 8) * 2}"` +
+             ` rx="${dotR + 8}" fill="${dotColor}" opacity="0.04"/>`;
+
+      /* Ligne pointillée grise entre les deux bulles */
+      svg += `<line x1="${xTeam + dotR}" y1="${cy}" x2="${xDem - dotR}" y2="${cy}"` +
+             ` stroke="#78909c" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.45" style="pointer-events:none"/>`;
+
+      /* Halo + cercle équipe */
+      svg += `<circle cx="${xTeam}" cy="${cy}" r="${dotR + 4}" fill="${dotColor}" opacity="0.07"/>`;
+      svg += `<circle cx="${xTeam}" cy="${cy}" r="${dotR}" fill="${fillStyle}" stroke="${strokeStyle}"` +
+             ` stroke-width="2" ${dashArray} opacity="${dotOpacity}"` +
+             ` style="cursor:pointer;stroke-${ms === 'planned' ? '' : 'var(--bg-surface);'}stroke-width:2"` +
+             ` class="tl-dot" data-tl-idx="${i}"/>`;
+      svg += `<text x="${xTeam}" y="${cy + 3.5}" text-anchor="middle" font-size="8" style="pointer-events:none;opacity:${dotOpacity}">` +
+             `${ms === 'held' ? '✓' : ms === 'cancelled' ? '✗' : '📅'}</text>`;
+
+      /* Halo + cercle demandeur */
+      svg += `<circle cx="${xDem}" cy="${cy}" r="${dotR + 4}" fill="${dotColor}" opacity="0.07"/>`;
+      svg += `<circle cx="${xDem}" cy="${cy}" r="${dotR}" fill="${fillStyle}" stroke="${strokeStyle}"` +
+             ` stroke-width="2" ${dashArray} opacity="${dotOpacity}"` +
+             ` style="cursor:pointer"` +
+             ` class="tl-dot" data-tl-idx="${i}"/>`;
+      svg += `<text x="${xDem}" y="${cy + 3.5}" text-anchor="middle" font-size="8" style="pointer-events:none;opacity:${dotOpacity}">` +
+             `${ms === 'held' ? '✓' : ms === 'cancelled' ? '✗' : '📅'}</text>`;
+
+      /* Label centré */
+      const msLabel = ms === 'held' ? 'Tenue' : ms === 'cancelled' ? 'Annulée' : 'Planifiée';
+      svg += `<text x="${centerX}" y="${cy - dotR - 7}" text-anchor="middle"` +
+             ` font-size="9" font-weight="700" fill="${dotColor}" opacity="${dotOpacity + 0.2}"` +
+             ` style="pointer-events:none">Réunion · ${msLabel}` +
+             (dateLabel ? `  ${dateLabel}` : '') + `</text>`;
+      if (snippet) {
+        svg += `<text x="${centerX}" y="${cy + dotR + 13}" text-anchor="middle"` +
+               ` font-size="9" fill="var(--text-muted)" opacity="0.55"` +
+               ` style="pointer-events:none">${esc(snippet)}</text>`;
+      }
+
+      svg += '</g>';
+
     /* ── Entrée normale ── */
-    if (item.type === 'entry') {
+    } else if (item.type === 'entry') {
       const entry     = item.entry;
       const ci        = actorKeys.indexOf(entry.actor || 'team');
       const cx        = actorX[entry.actor || 'team'];
@@ -428,6 +558,8 @@ function tpRenderTimeline(entries) {
                ` font-size="10" font-weight="600" fill="${color}" opacity="0.7"` +
                ` style="pointer-events:none">${et.label}</text>`;
       } else {
+        /* Chip reviewDate pour les entrées escalade */
+        const hasReviewDate = entry.etype === 'escalade' && entry.reviewDate;
         svg += `<text x="${labelX}" y="${cy - 4}" text-anchor="${anchor}"` +
                ` font-size="10" font-weight="700" fill="${color}" opacity="0.85"` +
                ` style="pointer-events:none" font-family="JetBrains Mono,monospace">` +
@@ -438,6 +570,13 @@ function tpRenderTimeline(entries) {
           svg += `<text x="${labelX}" y="${cy + 7}" text-anchor="${anchor}"` +
                  ` font-size="9" fill="var(--text-muted)" opacity="0.6"` +
                  ` style="pointer-events:none">${esc(snippet)}</text>`;
+        }
+        if (hasReviewDate) {
+          const rdParts = entry.reviewDate.split('-');
+          const rdDisp  = rdParts.length === 3 ? rdParts[2] + '/' + rdParts[1] : entry.reviewDate;
+          svg += `<text x="${labelX}" y="${cy + 19}" text-anchor="${anchor}"` +
+                 ` font-size="9" fill="#f59e42" opacity="0.85"` +
+                 ` style="pointer-events:none">📅 Review · ${rdDisp}</text>`;
         }
       }
 
@@ -491,6 +630,24 @@ function tpRenderTimeline(entries) {
     }
   });
 
+  /* ── Milestone reviewDate ── */
+  if (reviewMilestoneY !== null && reviewMilestoneY > 0) {
+    const _rdParts  = _activeReviewDate.split('-');
+    const _rdDisp   = _rdParts.length === 3 ? _rdParts[2] + '/' + _rdParts[1] : _activeReviewDate;
+    const _rdToday  = new Date().toISOString().slice(0, 10);
+    const _rdPast   = _activeReviewDate < _rdToday;
+    const _rdColor  = _rdPast ? '#ef8c00' : '#f59e42';
+    const _rdOpac   = _rdPast ? 0.55 : 0.75;
+    /* Ligne pointillée */
+    svg += `<line x1="0" y1="${reviewMilestoneY}" x2="${totalW}" y2="${reviewMilestoneY}"` +
+           ` stroke="${_rdColor}" stroke-width="1.5" stroke-dasharray="6,4" opacity="${_rdOpac}"/>`;
+    /* Étiquette */
+    svg += `<rect x="4" y="${reviewMilestoneY - 10}" width="106" height="18" rx="9"` +
+           ` fill="${_rdColor}" opacity="0.13"/>`;
+    svg += `<text x="57" y="${reviewMilestoneY + 3}" text-anchor="middle" font-size="9" font-weight="700"` +
+           ` fill="${_rdColor}" opacity="${_rdOpac + 0.1}">📅 À présenter · ${_rdDisp}</text>`;
+  }
+
   svg += '</svg>';
 
   wrap.innerHTML = headerHtml + '<div class="tl-svg-wrap">' + svg + '</div>';
@@ -525,6 +682,25 @@ function tpShowTip(e, entry) {
       `${entry.quality === 'complet' ? '✅ Complet' : '⚠️ Incomplet'}</div>`
     : '';
 
+  /* Badge statut réunion dans le tooltip */
+  const meetingHtml = (entry.etype === 'reunion')
+    ? (() => {
+        const ms = entry.meetingStatus || 'planned';
+        const msLabel = ms === 'held' ? '✅ Tenue' : ms === 'cancelled' ? '✗ Annulée' : '📅 Planifiée';
+        const msColor = ms === 'held' ? '#3FB950' : ms === 'cancelled' ? '#ef5350' : '#8b5cf6';
+        return `<div style="margin-top:3px;font-size:11px;color:${msColor};font-weight:600">${msLabel}</div>`;
+      })()
+    : '';
+
+  /* Chip reviewDate dans le tooltip */
+  const reviewDateHtml = (entry.etype === 'escalade' && entry.reviewDate)
+    ? (() => {
+        const rdParts = entry.reviewDate.split('-');
+        const rdDisp  = rdParts.length === 3 ? rdParts[2] + '/' + rdParts[1] : entry.reviewDate;
+        return `<div style="margin-top:3px;font-size:11px;color:#f59e42;font-weight:600">📅 Review prévue · ${rdDisp}</div>`;
+      })()
+    : '';
+
   tip.innerHTML =
     '<div class="tp-tip-head">' +
       `<span class="tp-tip-emoji" style="background:${et.color}22;border:1px solid ${et.color}44">${et.emoji}</span>` +
@@ -532,6 +708,8 @@ function tpShowTip(e, entry) {
         `<div class="tp-tip-type" style="color:${et.color}">${et.label}</div>` +
         `<div class="tp-tip-actor"><span style="opacity:0.5">par</span> ${actor.emoji} ${actor.label}</div>` +
         qualityHtml +
+        meetingHtml +
+        reviewDateHtml +
       '</div>' +
       (dateStr ? `<span class="tp-tip-date">${dateStr}</span>` : '') +
     '</div>' +

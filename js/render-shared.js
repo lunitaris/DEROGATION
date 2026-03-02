@@ -146,6 +146,36 @@ Cordialement,`
   })
 };
 
+/* ── BADGE "À PRÉSENTER" (partagé sidebar ↔ ticket) ─────────── */
+
+/**
+ * Retourne le HTML du tag "À présenter" si une entrée `escalade` de la team
+ * comporte une `reviewDate` et qu'aucun `final_review` n'est enregistré après.
+ * Retourne '' si les conditions ne sont pas réunies.
+ *
+ * @param {Array} actionLog — d.actionLog
+ * @returns {string} HTML ou ''
+ */
+function reviewDateTagHtml(actionLog) {
+  const log = actionLog || [];
+  /* Cherche le dernier escalade par team avec reviewDate */
+  const candidates = log.filter(e => e.etype === 'escalade' && e.actor === 'team' && e.reviewDate);
+  if (!candidates.length) return '';
+  candidates.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const last = candidates[0];
+  /* Vérifie qu'aucun final_review n'existe après cette entrée */
+  const hasFinalReview = log.some(
+    e => e.etype === 'final_review' && (e.date || '') >= (last.date || '')
+  );
+  if (hasFinalReview) return '';
+  /* Formate la date (YYYY-MM-DD → DD/MM) */
+  const parts = last.reviewDate.split('-');
+  const display = parts.length === 3 ? parts[2] + '/' + parts[1] : last.reviewDate;
+  const today = new Date().toISOString().slice(0, 10);
+  const isPast = last.reviewDate < today;
+  return `<span class="review-date-tag${isPast ? ' review-date-tag-past' : ''}">📅 À présenter · ${display}</span>`;
+}
+
 /* ── INDICATEURS (partagé sidebar ↔ ticket) ─────────────────── */
 
 function sharedIndicatorsHtml(risk, ns) {

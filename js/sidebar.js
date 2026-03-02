@@ -66,6 +66,7 @@ function renderSidebar(id) {
       <div class="sidebar-title">${esc(d.title)||'(Sans titre)'}</div>
       <div class="sidebar-ticket-row">
         <span class="sidebar-ticket">${esc(d.ticketId)||'Sans ticket ID'}</span>
+        ${reviewDateTagHtml(d.actionLog)}
         <button class="btn-meeting${hasMeetingNotes?' has-content':''}" onclick="toggleMeetingNotes('${id}')" title="${hasMeetingNotes?'Notes de réunion en cours':'Préparer une réunion'}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Réunion${hasMeetingNotes?' <span class="meeting-dot"></span>':''}
@@ -389,10 +390,18 @@ function renderActionLogSection(id) {
       const entry = _actionLog[realIdx];
       const actor = ACTORS[entry.actor || 'team'] || ACTORS.team;
       const et    = ETYPES[entry.etype || 'commentaire'] || ETYPES.commentaire;
-      return `<div class="action-log-row" data-real-idx="${realIdx}">
+      /* Badge statut réunion */
+      const isReunion = entry.etype === 'reunion';
+      const ms        = entry.meetingStatus || 'planned';
+      const msBadge   = isReunion
+        ? `<span class="al-ms-badge al-ms-${ms}" title="${ms === 'held' ? 'Tenue' : ms === 'cancelled' ? 'Annulée' : 'Planifiée'}">` +
+          `${ms === 'held' ? '✅' : ms === 'cancelled' ? '✗' : '📅'}</span>`
+        : '';
+      return `<div class="action-log-row${isReunion ? ' action-log-row-reunion' : ''}" data-real-idx="${realIdx}">
         <input type="date" class="action-log-date" value="${esc(entry.date||'')}" oninput="updateActionLogEntry('${id}', ${realIdx}, 'date', this.value)">
         <span class="action-log-actor" title="${esc(actor.label)}" style="color:${actor.color}">${actor.emoji}</span>
         <span class="action-log-etype" title="${esc(et.label)}" style="color:${et.color}">${et.emoji}</span>
+        ${msBadge}
         <input type="text" class="action-log-text" value="${esc(entry.text||'')}" placeholder="Action, décision, note…" oninput="updateActionLogEntry('${id}', ${realIdx}, 'text', this.value)">
         <button class="action-log-btn-remove" onclick="removeActionLogEntry('${id}', ${realIdx})" title="Supprimer cette ligne">×</button>
       </div>`;

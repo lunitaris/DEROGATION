@@ -468,3 +468,129 @@
 .tl-in-group .tl-halo {
   opacity: 0.04;
 }
+
+/* ================================================================
+   AMÉL. 1 — Réunion : groupes et boutons statut
+================================================================ */
+
+/* Groupe réunion dans la timeline — animation douce */
+.tl-reunion-group {
+  opacity: 0;
+  animation: tl-fade-in 0.45s ease forwards;
+  animation-delay: var(--tl-delay, 0ms);
+}
+
+/* Boutons statut réunion dans le formulaire */
+.tp-j-ms-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  flex-wrap: nowrap;
+}
+
+/* Ligne réunion (tp-jrow avec fond violet très léger) */
+.tp-jrow-reunion {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.04);
+}
+
+/* Boutons meetingStatus */
+.tp-ms-btn {
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.6;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  /* override width:100% from base.css */
+  width: auto;
+}
+.tp-ms-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+.tp-ms-btn.active[data-ms="planned"] {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  font-weight: 600;
+}
+.tp-ms-btn.active[data-ms="held"] {
+  background: rgba(63, 185, 80, 0.12);
+  border-color: #3FB950;
+  color: #3FB950;
+  font-weight: 600;
+}
+.tp-ms-btn.active[data-ms="cancelled"] {
+  background: rgba(239, 83, 80, 0.12);
+  border-color: #ef5350;
+  color: #ef5350;
+  font-weight: 600;
+}
+
+/* Boutons statut dans les lignes existantes du journal */
+.tp-jrow-ms {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.tp-jrow-ms .tp-ms-btn {
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ================================================================
+   AMÉL. 2 — Review date : champ dans le formulaire + ligne existante
+================================================================ */
+
+/* Ligne review date dans le formulaire */
+.tp-j-rd-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  flex-wrap: nowrap;
+}
+
+/* Input date review date (formulaire + ligne existante) */
+.tp-j-rd-input {
+  width: auto !important;
+  flex: 0 0 auto;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.tp-j-rd-input:focus {
+  border-color: #f59e42;
+  box-shadow: 0 0 0 2px rgba(245, 158, 66, 0.15);
+}
+
+/* Ligne review date inline dans les entrées existantes */
+.tp-jrow-rd {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 0;
+  flex-wrap: nowrap;
+}
+.tp-jrow-rd-input {
+  max-width: 130px;
+}
