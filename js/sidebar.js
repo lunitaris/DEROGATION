@@ -86,7 +86,7 @@ function renderSidebar(id) {
       <div class="lc-grid">
         <div class="lc-item">
           <span class="lc-label">Créé le</span>
-          <input type="date" class="lc-date-input" value="${toDateInputVal(d.dates.createdAt)}" onchange="quickUpdateDate('${id}','createdAt',this.value)">
+          <input type="date" id="sb-lc-created" class="lc-date-input" value="${toDateInputVal(_sbCreatedAt(d))}" onchange="quickUpdateDate('${id}','createdAt',this.value)">
         </div>
         <div class="lc-item">
           <span class="lc-label">Mis à jour</span>
@@ -94,7 +94,7 @@ function renderSidebar(id) {
         </div>
         <div class="lc-item">
           <span class="lc-label">Expire le</span>
-          <input type="date" class="lc-date-input ${expiryClass(daysUntil(d.dates.expiresAt))}" value="${toDateInputVal(d.dates.expiresAt)}" onchange="quickUpdateDate('${id}','expiresAt',this.value)">
+          <input type="date" id="sb-lc-expires" class="lc-date-input ${expiryClass(daysUntil(d.dates.expiresAt))}" value="${toDateInputVal(d.dates.expiresAt)}" onchange="quickUpdateDate('${id}','expiresAt',this.value)">
         </div>
         <div class="lc-item">
           <span class="lc-label">Next date clé</span>
@@ -228,7 +228,19 @@ function quickUpdate(id, field, value) {
 }
 function quickUpdateDate(id, field, val) {
   Store.update(id, { [field]: val || null });
-  renderAll();
+  /* Ne pas appeler renderAll() : ça détruirait l'input date actif (Chrome fire
+     change pour chaque chiffre saisi dans le champ année). On rafraîchit
+     uniquement les zones hors sidebar. */
+  renderStats();
+  renderTodayPanel();
+  renderList();
+  /* Mise à jour directe de la classe expiry sur l'input Expire le */
+  if (field === 'expiresAt') {
+    const inp = document.getElementById('sb-lc-expires');
+    if (inp) inp.className = 'lc-date-input ' + expiryClass(daysUntil(val));
+  }
+  /* Sync entrée soumission ↔ date d'ouverture */
+  if (field === 'createdAt' && val) _syncSidebarSoumission(id, val);
 }
 
 function toggleNotesBlock(key) {
@@ -422,6 +434,12 @@ function removeActionLogEntry(id, realIdx) {
 
 function updateActionLogEntry(id, idx, field, value) {
   if (_actionLog[idx]) _actionLog[idx][field] = value;
+  /* AMELIORATION3 — sync date d'ouverture si l'entrée soumission change */
+  if (field === 'date' && _actionLog[idx]?.etype === 'soumission' && value) {
+    Store.update(id, { createdAt: value });
+    const inp = document.getElementById('sb-lc-created');
+    if (inp) inp.value = value;
+  }
   clearTimeout(actionLogSaveTimer);
   const hint = document.getElementById('action-log-hint');
   if (hint) { hint.textContent = 'En cours…'; hint.className = 'action-log-hint'; }
@@ -434,6 +452,38 @@ function updateActionLogEntry(id, idx, field, value) {
 
 function toggleActionLog(id) {
   actionLogExpanded = !actionLogExpanded;
+  renderActionLogSection(id);
+}
+
+/* ================================================================
+   AMELIORATION3 — Synchronisation date d'ouverture ↔ soumission
+================================================================ */
+
+/**
+ * Retourne la date à afficher pour "Créé le" :
+ * si une entrée soumission existe dans le journal, on utilise sa date ;
+ * sinon, on utilise dates.createdAt.
+ */
+function _sbCreatedAt(d) {
+  const log = d.actionLog || [];
+  const soum = log.filter(e => e.etype === 'soumission' && e.date)
+                  .sort((a, b) => a.date.localeCompare(b.date))[0];
+  return soum ? soum.date : (d.dates.createdAt || null);
+}
+
+/**
+ * Crée ou met à jour l'entrée soumission dans _actionLog pour qu'elle
+ * soit en phase avec la date d'ouverture `date`.
+ */
+function _syncSidebarSoumission(id, date) {
+  const soumIdx = _actionLog.findIndex(e => e.etype === 'soumission');
+  if (soumIdx >= 0) {
+    if (_actionLog[soumIdx].date === date) return; /* déjà en phase */
+    _actionLog[soumIdx].date = date;
+  } else {
+    _actionLog.push({ date, text: 'Soumission du ticket', actor: 'demandeur', etype: 'soumission' });
+  }
+  Store.updateActionLog(id, _actionLog);
   renderActionLogSection(id);
 }
 

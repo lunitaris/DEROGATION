@@ -98,7 +98,10 @@ const Store = {
     if (map[d.actionStatus]) d.actionStatus = map[d.actionStatus];
     const statusMap = { branch_review: 'en_revue', rejected: 'en_revue' };
     if (statusMap[d.status]) d.status = statusMap[d.status];
-    if (typeof d.notes === 'string' && d.notes.trim() !== '') {
+    /* Migration one-shot : anciens tickets où `notes` contenait du texte structuré.
+       La condition !d.notesStructured est indispensable : si notesStructured existe déjà
+       (données post-migration), ne pas écraser le champ libre `notes` vers contexte. */
+    if (typeof d.notes === 'string' && d.notes.trim() !== '' && !d.notesStructured) {
       d.notesStructured = {
         contexte: d.notes, raison: '', risques: '', plan: '', mitigations: '', remediations: '',
         checks: { contexte: false, raison: false, risques: false, plan: false, mitigations: false, remediations: false }

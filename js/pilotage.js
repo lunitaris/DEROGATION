@@ -56,12 +56,12 @@ function renderPilotage(list) {
       <td class="pt-check">${completudeCell(d)}</td>
       <td class="pt-last" onclick="event.stopPropagation()">
         <input type="date" class="inline-date" value="${toDateInputVal(d.dates.lastCheckedAt)}"
-          onchange="Store.update('${d.id}',{lastCheckedAt:this.value});renderAll();"
+          onchange="Store.update('${d.id}',{lastCheckedAt:this.value||null});renderStats();renderTodayPanel();"
           title="Dernière vérification ServiceNow">
       </td>
       <td class="pt-relance" onclick="event.stopPropagation()">
         <input type="date" class="inline-date inline-date-ghost" value="${toDateInputVal(d.dates.nextFollowup)}"
-          onchange="Store.update('${d.id}',{nextFollowup:this.value||null});renderAll();"
+          onchange="Store.update('${d.id}',{nextFollowup:this.value||null});renderStats();renderTodayPanel();"
           title="Next date clé">
       </td>
     </tr>`;

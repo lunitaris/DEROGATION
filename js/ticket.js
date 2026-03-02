@@ -359,13 +359,19 @@ function renderLifecycle(d) {
   const el = document.getElementById('tp-lifecycle');
   if (!el) return;
   const dates = d.dates || {};
+  /* AMELIORATION3 — si une entrée soumission existe dans le journal,
+     "Créé le" affiche sa date (la plus ancienne soumission). */
+  const log = d.actionLog || [];
+  const soumEntry = log.filter(e => e.etype === 'soumission' && e.date)
+                       .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const createdVal = soumEntry ? soumEntry.date : toDateInputVal(dates.createdAt);
 
   el.innerHTML = `
     <div class="tp-summary-col-title">Cycle de vie</div>
     <div class="lc-grid">
       <div class="lc-item">
         <span class="lc-label">Créé le</span>
-        <input type="date" class="lc-date-input" value="${toDateInputVal(dates.createdAt)}" onchange="tpUpdateDate('createdAt',this.value)">
+        <input type="date" id="tp-lc-created" class="lc-date-input" value="${createdVal}" onchange="tpUpdateDate('createdAt',this.value)">
       </div>
       <div class="lc-item">
         <span class="lc-label">Mis à jour</span>
@@ -373,7 +379,7 @@ function renderLifecycle(d) {
       </div>
       <div class="lc-item">
         <span class="lc-label">Expire le</span>
-        <input type="date" class="lc-date-input ${expiryClass(daysUntil(dates.expiresAt))}" value="${toDateInputVal(dates.expiresAt)}" onchange="tpUpdateDate('expiresAt',this.value)">
+        <input type="date" id="tp-lc-expires" class="lc-date-input ${expiryClass(daysUntil(dates.expiresAt))}" value="${toDateInputVal(dates.expiresAt)}" onchange="tpUpdateDate('expiresAt',this.value)">
       </div>
       <div class="lc-item">
         <span class="lc-label">Next date clé</span>

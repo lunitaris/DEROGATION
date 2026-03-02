@@ -132,7 +132,7 @@ function tpRenderJournal() {
         <input type="date" class="action-log-date"
           value="${entry.date || ''}"
           oninput="tpUpdateJournal(${realIdx},'date',this.value)"
-          onchange="tpRenderJournal()">
+          onblur="tpRenderJournal()">
         <select class="tp-j-actor-sel" onchange="tpUpdateJournal(${realIdx},'actor',this.value)">
           ${_tpActorOptions(entry.actor || 'team')}
         </select>
@@ -187,6 +187,8 @@ function tpAddJournalEntry() {
   tp_journal.push({ date, text: message, actor, etype, quality });
   tpSaveJournal();
   tpRenderJournal();
+  /* AMELIORATION3 — si on vient d'ajouter une soumission, sync "Créé le" */
+  if (etype === 'soumission' && date) _tpSyncCreatedFromJournal();
 }
 
 function tpRemoveJournalEntry(realIdx) {
@@ -205,6 +207,14 @@ function tpUpdateJournal(realIdx, field, value) {
   /* Pour actor/etype : re-render pour mettre à jour le dot et la timeline */
   if (field === 'actor' || field === 'etype') {
     tpRenderJournal();
+  }
+  /* AMELIORATION3 — si la date ou le type d'une entrée soumission change,
+     synchronise "Créé le" dans Cycle de vie */
+  if (field === 'date' && tp_journal[realIdx].etype === 'soumission' && value) {
+    _tpSyncCreatedFromJournal();
+  }
+  if (field === 'etype' && value === 'soumission') {
+    _tpSyncCreatedFromJournal();
   }
 }
 
@@ -320,12 +330,18 @@ function tpUpdateDossierProgress() {
 function tpUpdateDate(field, val) {
   if (!tp_currentId) return;
   Store.update(tp_currentId, { [field]: val || null });
-  /* Re-render partiel : dates + bandeau identité (expiry badge) */
+  /* Ne pas appeler renderLifecycle() : ça détruirait les inputs date actifs
+     (Chrome fire change pour chaque chiffre saisi dans le champ année).
+     On met à jour uniquement le bandeau identité et la classe CSS expiresAt. */
   const d = Store.getById(tp_currentId);
-  if (d) {
-    renderLifecycle(d);
-    renderIdentityStrip(d);
+  if (!d) return;
+  renderIdentityStrip(d);
+  if (field === 'expiresAt') {
+    const inp = document.getElementById('tp-lc-expires');
+    if (inp) inp.className = 'lc-date-input ' + expiryClass(daysUntil(val));
   }
+  /* AMELIORATION3 — sync entrée soumission ↔ date d'ouverture */
+  if (field === 'createdAt' && val) _tpSyncSoumissionFromCreated(val);
 }
 
 function tpMarkCheckedNow() {
@@ -492,6 +508,44 @@ function tpShowToast(msg) {
   el.classList.add('show');
   clearTimeout(tp_toastTimer);
   tp_toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* ================================================================
+   AMELIORATION3 — Synchronisation "Créé le" ↔ entrée soumission journal
+================================================================ */
+
+/**
+ * Lit la date de la 1ʳᵉ entrée soumission (ordre chronologique)
+ * et met à jour "Créé le" dans le store + dans l'input DOM.
+ */
+function _tpSyncCreatedFromJournal() {
+  if (!tp_currentId) return;
+  const soumEntries = tp_journal.filter(e => e.etype === 'soumission' && e.date);
+  if (!soumEntries.length) return;
+  soumEntries.sort((a, b) => a.date.localeCompare(b.date));
+  const date = soumEntries[0].date;
+  const d = Store.getById(tp_currentId);
+  if (d && toDateInputVal(d.dates.createdAt) === date) return; /* déjà en phase */
+  Store.update(tp_currentId, { createdAt: date });
+  const inp = document.getElementById('tp-lc-created');
+  if (inp) inp.value = date;
+}
+
+/**
+ * Met à jour (ou crée) l'entrée soumission dans tp_journal pour qu'elle
+ * reflète la nouvelle date d'ouverture `date`.
+ */
+function _tpSyncSoumissionFromCreated(date) {
+  if (!date || !tp_currentId) return;
+  const soumIdx = tp_journal.findIndex(e => e.etype === 'soumission');
+  if (soumIdx >= 0) {
+    if (tp_journal[soumIdx].date === date) return; /* déjà en phase */
+    tp_journal[soumIdx].date = date;
+  } else {
+    tp_journal.push({ date, text: 'Soumission du ticket', actor: 'demandeur', etype: 'soumission' });
+  }
+  tpSaveJournal();
+  tpRenderJournal();
 }
 
 /* ================================================================
