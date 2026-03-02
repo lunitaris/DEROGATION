@@ -332,12 +332,8 @@ function tpMarkCheckedNow() {
   if (!tp_currentId) return;
   const now = new Date().toISOString();
   Store.update(tp_currentId, { lastCheckedAt: now });
-  /* Mettre à jour l'affichage inline */
-  const el = document.getElementById('tp-lastcheck-val');
-  if (el) {
-    el.textContent = 'Aujourd\'hui';
-    el.className = 'lc-val ' + lastCheckClass(now);
-  }
+  const fresh = Store.getById(tp_currentId);
+  if (fresh) renderIdentityStrip(Store._migrateDerog({ ...fresh }));
   tpShowToast('✓ Dernière vérification mise à jour');
 }
 
@@ -496,4 +492,37 @@ function tpShowToast(msg) {
   el.classList.add('show');
   clearTimeout(tp_toastTimer);
   tp_toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* ================================================================
+   RESIZE DU CADRE SUPÉRIEUR (drag handle)
+================================================================ */
+function tpInitSummaryResize() {
+  const handle = document.getElementById('tp-summary-handle');
+  if (!handle) return;
+
+  handle.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    const summaryEl = document.getElementById('tp-summary');
+    const startY = e.clientY;
+    const startH = summaryEl.getBoundingClientRect().height;
+
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e) {
+      const newH = Math.max(80, Math.min(500, startH + (e.clientY - startY)));
+      document.documentElement.style.setProperty('--tp-summary-h', newH + 'px');
+    }
+
+    function onUp() {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }

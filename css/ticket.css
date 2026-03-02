@@ -7,6 +7,7 @@
   --tp-topbar-h: 52px;
   --tp-strip-h: 52px;
   --tp-left-w: 390px;
+  --tp-summary-h: 180px;
 }
 
 /* ── Reset body pour page ticket ── */
@@ -175,14 +176,73 @@ body {
 #tp-identity-content {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  padding: 0 16px;
   height: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: hidden;
+  position: relative;
+  gap: 0;
 }
-#tp-identity-content::-webkit-scrollbar { display: none; }
 
+/* ── Groupe gauche : badges, porteur, asset, expiration ── */
+.tp-id-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* ── Groupe milieu : dernière action (centré absolument) ── */
+.tp-id-middle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  max-width: 40%;
+  overflow: hidden;
+}
+.tp-id-middle > * { pointer-events: auto; }
+
+/* Éléments de la dernière action dans le bandeau */
+.tp-id-la-actor { font-size: 13px; line-height: 1; }
+.tp-id-la-etype { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.tp-id-la-text  {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-id-la-date  {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.tp-id-la-empty { font-size: 11px; color: var(--text-muted); }
+
+/* ── Groupe droit : vérif ServiceNow ── */
+.tp-id-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Date dernière vérif. (couleurs via .last-check-* de views.css) */
+.tp-id-lastcheck { font-size: 11px; font-weight: 500; white-space: nowrap; }
+
+/* Bouton Vérifier compact dans le bandeau */
+.tp-id-verify-btn {
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+}
+
+/* Sous-éléments partagés avec l'ancien layout */
 .tp-id-badge-wrap {
   display: flex;
   align-items: center;
@@ -222,17 +282,48 @@ body {
 /* ── Cadre supérieur fusionné ── */
 #tp-summary {
   flex-shrink: 0;
-  padding: 10px 18px;
+  height: var(--tp-summary-h);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-bottom: 1px solid var(--border);
 }
 
 .tp-summary-inner {
+  flex: 1;
+  min-height: 0;
+  margin: 8px 18px 0;
   display: flex;
   align-items: stretch;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+/* ── Handle de redimensionnement du cadre supérieur ── */
+#tp-summary-handle {
+  flex-shrink: 0;
+  height: 10px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 18px;
+  transition: background var(--transition);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+#tp-summary-handle::after {
+  content: '';
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background var(--transition), width var(--transition);
+}
+#tp-summary-handle:hover::after {
+  background: var(--text-muted);
+  width: 48px;
 }
 
 #tp-risk-profile {
@@ -667,8 +758,104 @@ body {
 #tp-nb-remediations .tp-notes-block-ta:focus { outline: 1px solid rgba(63,185,80,0.4); border-radius: var(--radius-sm); }
 
 /* ================================================================
-   CYCLE DE VIE (panneau droit) — classes .lc-* définies dans components.css
+   CYCLE DE VIE — version compacte dans le cadre supérieur
+   (overrides des classes .lc-* et .tp-lastaction-* de components.css)
 ================================================================ */
+
+#tp-lifecycle .tp-summary-col-title {
+  margin-bottom: 5px;
+}
+
+/* Passe de grid 2-col à flex colonne */
+#tp-lifecycle .lc-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Chaque ligne = label gauche + valeur droite (style risk-ind-row) */
+#tp-lifecycle .lc-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+#tp-lifecycle .lc-item + .lc-item {
+  border-top: 1px solid var(--border-muted);
+}
+
+#tp-lifecycle .lc-label {
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#tp-lifecycle .lc-val {
+  font-size: 11px;
+}
+
+/* Input date transparent (lecture) → input classique au focus */
+#tp-lifecycle .lc-date-input {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  width: auto;          /* override base.css width:100% */
+  flex: 0 0 auto;
+  cursor: pointer;
+  text-align: right;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+#tp-lifecycle .lc-date-input:hover {
+  color: var(--accent);
+}
+#tp-lifecycle .lc-date-input:focus {
+  background: var(--bg-input);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  outline: none;
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
+/* Dernière action journal — compact */
+#tp-lifecycle .tp-lastaction-row {
+  padding-top: 4px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border-muted);
+}
+#tp-lifecycle .tp-lastaction-header {
+  margin-bottom: 2px;
+}
+#tp-lifecycle .tp-lastaction-meta {
+  font-size: 11px;
+  gap: 6px;
+}
+#tp-lifecycle .tp-lastaction-text {
+  font-size: 11px;
+}
+
+/* Dernière vérif. — compact */
+#tp-lifecycle .lc-check-row {
+  padding-top: 4px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border-muted);
+  gap: 6px;
+}
+#tp-lifecycle .lc-check-info {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+#tp-lifecycle .lc-check-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+}
 
 /* ── Dernière action journal — classes .tp-lastaction-* définies dans components.css ── */
 
@@ -929,8 +1116,9 @@ body {
   #tp-lifecycle { flex: 0 0 230px; }
 }
 @media (max-width: 700px) {
-  #tp-summary { padding: 8px 10px; }
-  .tp-summary-inner { flex-direction: column; }
+  #tp-summary { height: auto; }
+  #tp-summary-handle { display: none; }
+  .tp-summary-inner { flex-direction: column; margin: 8px 10px 0; }
   .tp-summary-divider { width: auto; height: 1px; }
   #tp-risk-profile, #tp-lifecycle { flex: none; width: 100%; }
   #tp-panes { flex-direction: column; }

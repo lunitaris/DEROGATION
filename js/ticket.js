@@ -13,6 +13,9 @@ function initTicketPage() {
   /* Raccourcis Ctrl+B/I/U sur les champs rich text */
   document.addEventListener('keydown', richTextKeydown);
 
+  /* Resize du cadre supérieur (restaure la hauteur sauvegardée + attache le handle) */
+  tpInitSummaryResize();
+
   /* Chiffrement : hérite la clé de l'onglet parent si possible */
   _initTicketCrypto(_loadTicketById);
 }
@@ -122,35 +125,67 @@ function renderTopbar(d) {
 function renderIdentityStrip(d) {
   const el = document.getElementById('tp-identity-content');
   if (!el) return;
-  const days  = daysUntil(d.dates.expiresAt);
-  const eCls  = expiryClass(days);
+  const days   = daysUntil(d.dates.expiresAt);
+  const eCls   = expiryClass(days);
   const eLabel = days === null ? '—' : (days < 0 ? 'Expirée' : `J-${days}`);
 
+  /* Seul chip conservé : Exposé Internet (EDR et REMA supprimés) */
+  const internetChip = (d.risk && d.risk.internetExposed)
+    ? '<span class="chip chip-warn">🌐 Exposé Internet</span>'
+    : '';
+
+  /* Dernière action journal — format inline court */
+  const log = d.actionLog || [];
+  let laHtml = '<span class="tp-id-la-empty">Aucune action</span>';
+  if (log.length) {
+    const la    = [...log].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+    const actor = ACTORS[la.actor || 'team'] || ACTORS.team;
+    const et    = ETYPES[la.etype  || 'commentaire'] || ETYPES.commentaire;
+    const txt   = la.text ? (la.text.length > 55 ? la.text.substring(0, 55) + '…' : la.text) : '';
+    const dStr  = la.date ? formatDate(la.date) : '';
+    laHtml = `
+      <span class="tp-id-la-actor" style="color:${actor.color}">${actor.emoji}</span>
+      <span class="tp-id-la-etype" style="color:${et.color}">${et.emoji} ${et.label}</span>
+      ${txt  ? `<span class="tp-id-la-text">${esc(txt)}</span>` : ''}
+      ${dStr ? `<span class="tp-id-la-date">${dStr}</span>` : ''}`;
+  }
+
+  /* Dernière vérif. ServiceNow */
+  const lcCls   = lastCheckClass(d.dates.lastCheckedAt);
+  const lcLabel = d.dates.lastCheckedAt
+    ? formatDate(d.dates.lastCheckedAt) + lastCheckSuffix(d.dates.lastCheckedAt)
+    : 'Jamais vérifié';
+
   el.innerHTML = `
-    <div class="tp-id-badge-wrap">
-      ${statusBadge(d.status)}
-      ${actionBadge(d.actionStatus)}
-      ${d.actionMotif && d.actionStatus === 'attente_demandeur' ? motifBadge(d) : ''}
+    <div class="tp-id-left">
+      <div class="tp-id-badge-wrap">
+        ${statusBadge(d.status)}
+        ${actionBadge(d.actionStatus)}
+        ${d.actionMotif && d.actionStatus === 'attente_demandeur' ? motifBadge(d) : ''}
+      </div>
+      <div class="tp-id-sep"></div>
+      <div class="tp-id-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <strong>${esc(d.applicant?.name) || '—'}</strong>
+      </div>
+      ${d.asset ? `
+      <div class="tp-id-sep"></div>
+      <div class="tp-id-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <strong>${esc(d.asset)}</strong>
+      </div>` : ''}
+      <div class="tp-id-sep"></div>
+      <div class="tp-id-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Expire : <strong class="${eCls}">${eLabel}</strong>
+      </div>
+      ${internetChip ? `<div class="tp-id-sep"></div><div class="tp-id-meta">${internetChip}</div>` : ''}
     </div>
-    <div class="tp-id-sep"></div>
-    <div class="tp-id-meta">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <strong>${esc(d.applicant?.name) || '—'}</strong>
+    <div class="tp-id-middle">${laHtml}</div>
+    <div class="tp-id-right">
+      <span class="tp-id-lastcheck ${lcCls}" id="tp-lastcheck-val">${lcLabel}</span>
+      <button class="lc-check-btn tp-id-verify-btn" onclick="tpMarkCheckedNow()">✓ Vérifier</button>
     </div>
-    ${d.asset ? `
-    <div class="tp-id-sep"></div>
-    <div class="tp-id-meta">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      <strong>${esc(d.asset)}</strong>
-    </div>` : ''}
-    <div class="tp-id-sep"></div>
-    <div class="tp-id-meta">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Expire : <strong class="${eCls}">${eLabel}</strong>
-    </div>
-    ${d.risk ? `
-    <div class="tp-id-sep"></div>
-    <div class="tp-id-meta">${riskChips(d.risk)}</div>` : ''}
   `;
 }
 
@@ -323,11 +358,7 @@ function renderDossier(d) {
 function renderLifecycle(d) {
   const el = document.getElementById('tp-lifecycle');
   if (!el) return;
-  const dates    = d.dates || {};
-  const lcCls    = lastCheckClass(dates.lastCheckedAt);
-  const lcSuffix = lastCheckSuffix(dates.lastCheckedAt);
-
-  const lastActionHtml = sharedLastActionHtml(d.actionLog);
+  const dates = d.dates || {};
 
   el.innerHTML = `
     <div class="tp-summary-col-title">Cycle de vie</div>
@@ -347,14 +378,6 @@ function renderLifecycle(d) {
       <div class="lc-item">
         <span class="lc-label">Next date clé</span>
         <input type="date" class="lc-date-input" value="${toDateInputVal(dates.nextFollowup)}" onchange="tpUpdateDate('nextFollowup',this.value)">
-      </div>
-      ${lastActionHtml}
-      <div class="lc-check-row">
-        <div class="lc-check-info">
-          <span class="lc-label">Dernière vérif. ServiceNow</span>
-          <span class="lc-val ${lcCls}" id="tp-lastcheck-val">${dates.lastCheckedAt ? formatDate(dates.lastCheckedAt) + lcSuffix : '—'}</span>
-        </div>
-        <button class="lc-check-btn" onclick="tpMarkCheckedNow()">✓ Vérifier maintenant</button>
       </div>
     </div>`;
 }
