@@ -1,5 +1,5 @@
 /* ================================================================
-   CONSTANTS — Labels, motifs, sections notes
+   CONSTANTS — Labels, sections notes
 ================================================================ */
 const STATUS_LABELS = {
   new:      'New',
@@ -8,34 +8,6 @@ const STATUS_LABELS = {
   expired:  'Expiré'
 };
 
-// Next steps — qui doit agir / quelle est la prochaine étape
-const ACTION_LABELS = {
-  a_faire:             'À faire par moi',
-  attente_demandeur:   'En attente retour demandeur',
-  reunion_prevue:      'Réunion prévue',
-  suivi_date:          'Suivi à date',
-  attente_validation:  'En attente validation interne',
-  termine:             'Terminé / rien à faire'
-};
-
-// Descriptions courtes pour badges/vues liste
-const ACTION_SHORT = {
-  a_faire:            'À faire par moi',
-  attente_demandeur:  'Attente demandeur',
-  reunion_prevue:     'Réunion prévue',
-  suivi_date:         'Suivi à date',
-  attente_validation: 'Attente validation',
-  termine:            'Terminé'
-};
-
-const MOTIF_LABELS = [
-  'Ticket incomplet',
-  'Demande d\'informations',
-  'Confirmation ticket ancien',
-  'Confirmation échéance',
-  'Suivi avancement',
-  'Autre'
-];
 
 const DIC_LABELS = ['', 'Faible', 'Moyen', 'Élevé', 'Critique'];
 

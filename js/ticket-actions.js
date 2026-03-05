@@ -6,6 +6,7 @@
 /* ── État du module ── */
 let tp_currentId = null;
 let tp_journal   = [];          /* copie locale du journal (source de vérité) */
+let tp_lastRenderedAt = null;   /* updatedAt du dernier rendu complet */
 
 /* ── Timers debounce ── */
 let tp_meetingNotesSaveTimer = null;

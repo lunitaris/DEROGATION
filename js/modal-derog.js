@@ -69,26 +69,13 @@ function renderModalForm(d) {
     <!-- WORKFLOW -->
     <div class="form-section">
       <div class="form-section-title">Workflow &amp; Statut</div>
-      <div class="form-row">
+      <div class="form-row full">
         <div class="form-field">
           <label>Statut ServiceNow</label>
           <select id="f-status">
             ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${(d?.status||'new')===v?'selected':''}>${l}</option>`).join('')}
           </select>
         </div>
-        <div class="form-field">
-          <label>Next step — Qui doit agir</label>
-          <select id="f-actionStatus" onchange="document.getElementById('f-motif-row').style.display=this.value==='attente_demandeur'?'flex':'none'">
-            ${Object.entries(ACTION_LABELS).map(([v,l])=>`<option value="${v}" ${(d?.actionStatus||'a_faire')===v?'selected':''}>${l}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div id="f-motif-row" class="form-field" style="display:${(d?.actionStatus||'a_faire')==='attente_demandeur'?'flex':'none'}">
-        <label>Motif de l'attente</label>
-        <select id="f-actionMotif">
-          <option value="">— Sélectionner un motif</option>
-          ${MOTIF_LABELS.map(m=>`<option value="${m}" ${(d?.actionMotif||'')=== m?'selected':''}>${m}</option>`).join('')}
-        </select>
       </div>
     </div>
 
@@ -190,8 +177,6 @@ function saveDerogation() {
     applicantName:     g('f-applicantName')?.value.trim()|| '',
     asset:             g('f-asset')?.value.trim()        || '',
     status:            g('f-status')?.value               || 'new',
-    actionStatus:      g('f-actionStatus')?.value         || 'a_faire',
-    actionMotif:       g('f-actionMotif')?.value          || null,
     urgency:           g('f-urgency')?.value              || '-',
     edrInstalled:      v.edr  || '',
     internetExposed:   v.net  || '',

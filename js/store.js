@@ -90,10 +90,11 @@ const Store = {
 
   _migrateDerog(d) {
     const map = {
-      waiting_info: 'attente_demandeur', ready_for_review: 'attente_validation',
+      waiting_info: 'a_faire', ready_for_review: 'attente_validation',
       waiting_boss: 'attente_validation', done: 'termine',
-      ticket_incomplet: 'a_faire', attente_info: 'attente_demandeur',
-      a_relancer: 'attente_demandeur', pret_review: 'attente_validation', cloture: 'termine'
+      ticket_incomplet: 'a_faire', attente_info: 'a_faire',
+      a_relancer: 'a_faire', attente_demandeur: 'a_faire',
+      pret_review: 'attente_validation', cloture: 'termine'
     };
     if (map[d.actionStatus]) d.actionStatus = map[d.actionStatus];
     const statusMap = { branch_review: 'en_revue', rejected: 'en_revue' };
@@ -145,10 +146,7 @@ const Store = {
       applicant: { name: fields.applicantName || '' },
       asset: fields.asset || '',
       status: fields.status || 'new',
-      actionStatus: fields.actionStatus || 'a_faire',
-      actionDetail: fields.actionDetail || '',
-      actionDueDate: fields.actionDueDate || null,
-      actionMotif: fields.actionMotif || null,
+
       risk: {
         edrInstalled: fields.edrInstalled === 'yes',
         internetExposed: fields.internetExposed === 'yes',
@@ -194,8 +192,6 @@ const Store = {
     const history = [...d.history];
     if (fields.status && fields.status !== d.status)
       history.push({ timestamp: now, event: 'status_changed', from: d.status, to: fields.status, note: '' });
-    if (fields.actionStatus && fields.actionStatus !== d.actionStatus)
-      history.push({ timestamp: now, event: 'action_changed', from: d.actionStatus, to: fields.actionStatus, note: '' });
     data.derogations[idx] = {
       ...d,
       ticketId: fields.ticketId ?? d.ticketId,
@@ -203,10 +199,6 @@ const Store = {
       applicant: { name: fields.applicantName ?? d.applicant.name },
       asset: fields.asset ?? d.asset,
       status: fields.status ?? d.status,
-      actionStatus: fields.actionStatus ?? d.actionStatus,
-      actionDetail: fields.actionDetail !== undefined ? fields.actionDetail : d.actionDetail,
-      actionDueDate: fields.actionDueDate !== undefined ? fields.actionDueDate : d.actionDueDate,
-      actionMotif: fields.actionMotif !== undefined ? fields.actionMotif : d.actionMotif,
       risk: {
         edrInstalled: fields.edrInstalled !== undefined ? fields.edrInstalled === 'yes' : d.risk.edrInstalled,
         internetExposed: fields.internetExposed !== undefined ? fields.internetExposed === 'yes' : d.risk.internetExposed,

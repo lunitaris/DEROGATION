@@ -23,9 +23,9 @@ Fonctionne en `file://` — **pas d'ES modules** (`import`/`export`), scripts cl
 │   ├── ticket.css          (layout 2 panneaux plein écran, topbar ticket, bandeau identité, toast)
 │   └── timeline.css        (journal enrichi actor/etype, timeline SVG, tooltip — ticket.html only)
 └── js/
-    ├── constants.js        (STATUS_LABELS, ACTION_LABELS, MOTIF_LABELS, NOTES_SECTIONS, DIC_LABELS, ACTORS, ETYPES)
+    ├── constants.js        (STATUS_LABELS, NOTES_SECTIONS, DIC_LABELS, ACTORS, ETYPES)
     ├── store.js            (Store object — load/save/create/update/migrate/delete/prefs)
-    ├── helpers.js          (formatDate, daysUntil, badges, esc, autoResizeTA, lastCheck*, sortedActionLogIndices, clipboardFallbackCopy)
+    ├── helpers.js          (formatDate, daysUntil, statusBadge, urgencyBadge, reviewDateTagHtml, esc, autoResizeTA, lastCheck*, sortedActionLogIndices, clipboardFallbackCopy)
     ├── filters.js          (UI state, getFiltered, applyFilters, renderStats, renderCards, renderAll…)
     ├── sidebar.js          (openSidebar, renderSidebar, quickUpdate, autosave, renderActionLogSection)
     ├── pilotage.js         (renderPilotage, setPilotageSort — colonne ↗ plein écran)
@@ -66,10 +66,6 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
     "applicant": { "name": "Jean Dupont" },
     "asset": "Infra prod Zone B",
     "status": "new | en_revue | validated | expired",
-    "actionStatus": "a_faire | attente_demandeur | reunion_prevue | suivi_date | attente_validation | termine",
-    "actionDetail": "texte libre — champ legacy, plus affiché dans l'UI",
-    "actionDueDate": "ISO date ou null — champ legacy, plus affiché dans l'UI",
-    "actionMotif": "string ou null  ← visible seulement si actionStatus = attente_demandeur",
     "risk": {
       "edrInstalled": false,
       "internetExposed": true,
@@ -100,10 +96,13 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
         "plan": false, "mitigations": false, "remediations": false
       }
     },
-    "history": [{ "timestamp": "ISO", "event": "created|status_changed|action_changed", "from": null, "to": "new", "note": "" }]
+    "history": [{ "timestamp": "ISO", "event": "created|status_changed", "from": null, "to": "new", "note": "" }]
   }]
 }
 ```
+
+> **Champs legacy** présents dans les données existantes mais ignorés par l'UI :
+> `actionStatus`, `actionDetail`, `actionDueDate`, `actionMotif` — conservés par `_migrateDerog()` pour rétrocompat, jamais écrits par `create()`/`update()`.
 
 ### Prefs (localStorage key: `derogmanager_prefs`)
 ```json
@@ -151,7 +150,7 @@ ils s'exécutent après le chargement de tous les scripts (appelés depuis des c
 | `team` | Team Dérog | 🛡 | `#4caf50` (vert) |
 
 ### ETYPES (types d'événements journal — index.html et ticket.html)
-10 types : `soumission` 📤 · `question` ❓ · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` 💎 (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡
+12 types : `soumission` 📤 · `question` ❓ · `relance` 🔄 · `reponse` 💬 · `validation` ✅ · `escalade` ⭐ (Review) · `final_review` 💎 (Final Review) · `acceptation` 🎉 · `refus` ❌ · `complement` 📎 · `commentaire` 💡 · `reunion` 📅
 Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (string d'état ou null).
 ⚠️ L'etype `escalade` conserve son `id: 'escalade'` pour la compat des données existantes ; son label est "Review" et son emoji ⭐.
 `final_review` : `triggersStatus: null`, couleur `#F1C40F` (ambre/or) — déclenche un segment ambre dans la timeline jusqu'au prochain changement d'état.
@@ -164,20 +163,6 @@ Chaque type a : `id`, `label`, `emoji`, `color`, `triggersStatus` (string d'éta
 | `validated` | Validé | Vert |
 | `expired` | Expiré | Gris (opacité 0.75 sur les cartes) |
 
-### ACTION_LABELS (actionStatus) — "Next steps"
-| Clé | Libellé |
-|-----|---------|
-| `a_faire` | À faire par moi |
-| `attente_demandeur` | En attente retour demandeur |
-| `reunion_prevue` | Réunion prévue |
-| `suivi_date` | Suivi à date |
-| `attente_validation` | En attente validation interne |
-| `termine` | Terminé / rien à faire |
-
-### MOTIF_LABELS (actionMotif)
-Affiché uniquement si `actionStatus === 'attente_demandeur'`.
-Valeurs : `Ticket incomplet` / `Demande d'informations` / `Confirmation ticket ancien` / `Confirmation échéance` / `Suivi avancement` / `Autre`
-
 ### NOTES_SECTIONS (dossier structuré)
 Clés : `contexte`, `raison`, `risques`, `plan`, `mitigations`, `remediations`
 Chaque section a une textarea + un bouton checkbox "OK / À valider".
@@ -186,7 +171,6 @@ Chaque section a une textarea + un bouton checkbox "OK / À valider".
 Valeurs : `-` (aucune), `p0`, `p1`.
 - Affiché **uniquement dans la sidebar** (section hero) : badge coloré selon `urgency.level`
 - CSS : variable `--urgency-p0` (rouge) / `--urgency-p1` (orange) définies dans `base.css`
-- **Absent** des cartes, du tableau, de la vue Pilotage, du Today Panel et des filtres
 - Modifiable uniquement via la modal de création/édition (champ select dans modal-derog.js)
 
 ---
@@ -196,18 +180,14 @@ Valeurs : `-` (aucune), `p0`, `p1`.
 ```
 TOPBAR (fixe) — logo + recherche + boutons
 ├── TODAY PANEL (collapsible) — items urgents auto-calculés
-├── STATS BAR — pills cliquables : New · En revue · Validé · Expiré · À faire par moi · Expire <7j
-├── FILTER BAR — dropdowns (statut SN, next step, expiry) + toggle card/table/pilotage
+├── STATS BAR — pills cliquables : New · En revue · Validé · Expiré · Expire <7j · 🔄 Attente réponse
+├── FILTER BAR — dropdowns (statut SN, expiry) + toggle card/table/pilotage
 └── LIST CONTAINER — cartes | tableau compact | vue Pilotage
 
 VUE CARD — chaque carte affiche :
-  Ticket · Statut SN · Titre · Porteur + Asset
-  Next step badge · Motif badge (orange, si attente_demandeur + motif renseigné) · Expiration
+  Ticket · Statut SN · Titre · Porteur + Asset · Expiration
   Bouton ↗ (visible au hover) → ouvre ticket.html en nouvel onglet
   Clic molette → ouvre aussi ticket.html en nouvel onglet
-
-VUE TABLE — colonnes :
-  Ticket · Titre · Porteur · Statut SN · Next step · Motif · Expiration
 
 VUE PILOTAGE — tableau dense :
   ↗ · Ticket · Titre · Porteur · Statut · Dernière action journal (emoji + texte 50c) ·
@@ -216,7 +196,9 @@ VUE PILOTAGE — tableau dense :
 
 VUE TICKET PLEIN ÉCRAN (ticket.html?id=…)
   Topbar fixe : ← retour · breadcrumb · 3 boutons email (copie presse-papiers) · Modifier · Thème · Supprimer
-  Bandeau identité fixe : badges statut/action/motif · porteur · asset · expiration · risk chips
+  Bandeau identité fixe : badge statut SN · badge reviewDate · porteur · asset · expiration
+    ⚠️ .tp-id-middle (dernière action journal, position absolute centrée) masqué @media (max-width:1300px)
+       pour éviter le chevauchement avec .tp-id-left sur petits écrans
   Cadre supérieur fusionné (tp-summary-inner) — 3 colonnes côte à côte :
     1. Profil de risque (185px) — grille indicateurs (Mitigations, Plan d'action, Exposé internet, DIC)
     2. Notes libres (flex:1, fond jaune) — textarea autosave 800ms
@@ -233,7 +215,7 @@ VUE TICKET PLEIN ÉCRAN (ticket.html?id=…)
 DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   ├── Hero (titre, badge urgence, statut SN, ticket ID, bouton 📋 Réunion)
   ├── Porteur + Asset
-  ├── Statut ServiceNow (select inline)
+  ├── Statut ServiceNow (select inline — seul champ workflow restant)
   ├── Journal (fond gris) — lignes : date | actor-emoji | etype-emoji | texte, triées chrono ↑
   │     [+] dans le header du bloc ; 4 plus récentes par défaut, expand/collapse ; [×] par ligne
   │     autosave debounce 800ms → champ `actionLog`
@@ -248,8 +230,8 @@ DETAIL SIDEBAR (droite, 440px) — slide-in — ordre exact des sections :
   ├── Dossier (6 sections notes structurées) — autosave 1200ms, checkbox par section
   └── Actions rapides (emails, modifier, supprimer)
 
-MODAL new/edit — tous les champs
-  ↳ Motif conditionnel : visible si f-actionStatus = attente_demandeur (onchange inline)
+MODAL new/edit — champs : identification, porteur, statut SN, urgence, profil de risque, dates, dossier
+  (plus de champ Next step / Motif)
 MODAL email — 3 templates (relance info, point statut, alerte expiration)
 MODAL confirm — suppression
 ```
@@ -266,19 +248,16 @@ MODAL confirm — suppression
 ---
 
 ## Today Panel — logique d'alertes
-- `a_faire` → "À faire par moi"
-- `reunion_prevue` → "Réunion prévue"
-- `attente_demandeur` (sans date ou date dépassée) → alerte relance
 - Expire ≤7j ET statut ≠ validated ET ≠ expired → "Expire dans N jours"
-- nextFollowup ≤ aujourd'hui ET pas terminé → "Date de relance dépassée"
+- nextFollowup ≤ aujourd'hui ET statut ≠ validated ET ≠ expired → "Date de relance dépassée"
+- urgency p0/p1 → "Urgence XX — traitement prioritaire"
 
 ---
 
 ## Helpers UI importants
-- `actionBadge(actionStatus)` — badge coloré Next step (cartes + table uniquement)
-- `motifBadge(d)` — badge orange motif (carte uniquement, si attente_demandeur + motif)
-- `motifCell(d)` — idem pour table (affiche `—` si vide)
 - `statusBadge(status)` — badge statut SN
+- `urgencyBadge(d)` — badge P0/P1 (sidebar uniquement)
+- `reviewDateTagHtml(actionLog)` — badge "À présenter" si escalade team avec reviewDate active
 - `autoResizeTA(el)` — `el.style.height='auto'; el.style.height=el.scrollHeight+'px'` ; toujours appeler via `requestAnimationFrame` après un `innerHTML=` ; nécessite `resize:none; overflow-y:hidden` sur la textarea
 
 ---
@@ -292,24 +271,27 @@ Règles implicites à respecter dans **tout** nouveau code :
 3. **`setTimeout(fn, 20)` avant PBKDF2** — tout appel bloquant à `StoreCrypto.unlock()` ou `StoreCrypto.setup()` doit être enveloppé dans un `setTimeout(fn, 20)` pour permettre au spinner de s'afficher.
 4. **`requestAnimationFrame` avant `autoResizeTA()`** — après un `innerHTML=`, toujours différer `autoResizeTA()` dans un `requestAnimationFrame` (le layout n'est pas encore calculé au moment de l'injection).
 5. **Jamais `renderAll()` depuis un chemin autosave** — les méthodes `updateXxx()` sont silencieuses par convention ; les appeler depuis un callback autosave ne doit pas déclencher de re-render global.
+6. **`tp_lastRenderedAt` protège le focus** — `renderTicketPage(d)` met à jour `tp_lastRenderedAt = d.dates?.updatedAt`. Les listeners `storage` et `focus` dans `_loadTicketById` comparent cet horodatage avant tout re-render, pour ne pas écraser les formulaires en cours de saisie lors d'un alt-tab.
 
 ---
 
 ## Migrations
 `Store._migrateDerog(d)` gère :
-- Old `actionStatus` values gen1→2→3 : `waiting_info/ready_for_review/done` → gen2, puis `ticket_incomplet/attente_info/a_relancer/pret_review/cloture` → gen3
+- Old `actionStatus` values (toutes générations) → `a_faire` (champ ignoré dans l'UI mais préservé dans les données existantes)
 - Old `status` values : `branch_review/rejected` → `en_revue` ; `expired` conservé tel quel (statut valide)
 - `notes` string → `notesStructured` object
-- Champs manquants : `actionDetail`, `actionDueDate`, `actionMotif`, `notesStructured.checks`, `lastCheckedAt`
+- Champs manquants : `notesStructured.checks`, `lastCheckedAt`
 - Old `urgency.p0Linked/p1Linked` → `urgency.level`
 - Old `actionLog` entries `{ date, text }` → `{ date, text, actor: 'team', etype: 'commentaire' }` (valeurs neutres par défaut)
+
+> **Procédure de suppression d'un champ** : retirer de `create()` et `update()`, ajouter une règle de migration dans `_migrateDerog()` si l'ancienne valeur doit être remappée, puis nettoyer constants/helpers/CSS/HTML/filtres/stats/Today Panel en cascade.
 
 ---
 
 ## Stats bar — comportement des compteurs
 - **New / En revue / Validé / Expiré** : compteur brut par statut, clic = filtre rapide (toggle)
-- **À faire par moi** : exclut `validated` et `expired`, rouge si > 0
 - **Expire <7j** : exclut `validated` et `expired`, orange si > 0
+- **🔄 Attente réponse** : tickets où `isTeamWaitingForInfo()` est vrai (ball-in-court = demandeur d'après le dernier journal), orange si > 0
 
 ---
 
@@ -353,7 +335,7 @@ Règles implicites à respecter dans **tout** nouveau code :
 - `initTicketPage()` — charge le thème, délègue à `_initTicketCrypto(_loadTicketById)`
 - `_initTicketCrypto(afterUnlock)` — tente `StoreCrypto.tryRestoreFromSession()` (sessionStorage, sans PBKDF2), sinon `openCryptoModal('unlock', cb)`
 - `_loadTicketById()` — lit ?id=, initialise `tp_journal`, écoute `storage` + `focus` (closure sur `id`)
-- `renderTicketPage(d)` — appelle tous les render* + redimensionne les textareas ; **`renderTimelineSection()` doit être appelé avant `renderJournalShell()`** (crée #tp-timeline-wrap avant que tpRenderJournal() le peuple)
+- `renderTicketPage(d)` — met à jour `tp_lastRenderedAt`, appelle tous les render* + redimensionne les textareas ; **`renderTimelineSection()` doit être appelé avant `renderJournalShell()`** (crée #tp-timeline-wrap avant que tpRenderJournal() le peuple)
 - `renderTopbar(d)`, `renderIdentityStrip(d)`
 - `renderRiskProfile(d)`, `renderMeetingNotes(d)`, `renderQuickNotes(d)`
 - `renderTimelineSection()` — crée `#tp-timeline-wrap` dans `#tp-timeline`
@@ -364,6 +346,8 @@ Règles implicites à respecter dans **tout** nouveau code :
 Deux mécanismes dans `_loadTicketById` :
 1. `window.addEventListener('storage', ...)` — re-render si index.html modifie le Store (fonctionne entre origines différentes ou même origine selon le navigateur)
 2. `window.addEventListener('focus', ...)` — re-render quand ticket.html reprend le focus **(compensate pour la peu fiabilité des storage events en `file://`)**
+
+⚠️ **Les deux listeners comparent `updatedAt` avant de re-rendre** : si `fresh.dates?.updatedAt === tp_lastRenderedAt`, le re-render est annulé. Cela évite d'écraser les champs du formulaire journal en cours de saisie lors d'un alt-tab.
 
 ### Journal d'actions — tri chronologique
 - **Les deux vues** trient **décroissant** via `sortedActionLogIndices(log)` (helpers.js) — `db.localeCompare(da)`, sans date → fin de liste
@@ -395,6 +379,10 @@ Tout nouvel élément `<input>` ou `<select>` inline (ex: dans une flex row) ser
 ### Piège : classe `inline-date`
 La classe `.inline-date` (définie dans `views.css` pour la vue Pilotage) impose `width: 100%`.
 **Ne jamais l'ajouter aux inputs date du journal** (`action-log-date`) — elle écraserait la largeur fixe et compresserait le texte et les boutons de la ligne à zéro.
+
+### Piège : `.tp-id-middle` (bandeau identité ticket)
+Position `absolute; left:50%` — ne participe pas au flux flex. Sur écrans < 1300px il chevauche `.tp-id-left`.
+**Fix** : masqué via `@media (max-width: 1300px)`. Si on ajoute du contenu dans `.tp-id-left`, vérifier que le breakpoint reste suffisant.
 
 ### Couleurs sémantiques du dossier
 Chaque section du dossier a un `id` (ex: `id="nb-contexte"` en sidebar, `id="tp-nb-contexte"` en plein écran) qui reçoit une couleur de bordure/fond/titre spécifique via CSS :

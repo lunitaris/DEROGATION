@@ -188,7 +188,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -1109,6 +1110,11 @@ body {
 /* ================================================================
    RESPONSIVE
 ================================================================ */
+@media (max-width: 1300px) {
+  /* La dernière action en absolu déborde sur le groupe gauche :
+     on la masque — l'info reste accessible dans le panneau droit */
+  .tp-id-middle { display: none; }
+}
 @media (max-width: 900px) {
   :root { --tp-left-w: 320px; }
   .tp-btn-email { font-size: 11px; padding: 4px 8px; }

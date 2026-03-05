@@ -8,7 +8,7 @@
    ces fonctions produisent uniquement les parties identiques.
 
    Dépendances (chargées avant) :
-     constants.js  → STATUS_LABELS, ACTION_LABELS, ACTORS, ETYPES
+     constants.js  → STATUS_LABELS, ACTORS, ETYPES
      helpers.js    → dicHtml, formatDate, esc
 ================================================================ */
 

@@ -68,19 +68,24 @@ function _loadTicketById() {
   window.addEventListener('storage', e => {
     if (e.key === Store.KEY) {
       const fresh = Store.getById(id);
-      if (fresh) {
-        const df = Store._migrateDerog({ ...fresh });
-        tp_journal = [...(df.actionLog || [])];
-        renderTicketPage(df);
-      }
+      if (!fresh) return;
+      const freshAt = fresh.dates?.updatedAt || null;
+      if (freshAt === tp_lastRenderedAt) return; /* rien n'a changé */
+      const df = Store._migrateDerog({ ...fresh });
+      tp_journal = [...(df.actionLog || [])];
+      renderTicketPage(df);
     }
   });
 
   /* Rafraîchit aussi quand l'onglet reprend le focus
-     (les storage events sont peu fiables en file://) */
+     (les storage events sont peu fiables en file://)
+     — mais seulement si les données ont réellement changé depuis le dernier rendu,
+       pour ne pas écraser les champs en cours de saisie */
   window.addEventListener('focus', () => {
     const fresh = Store.getById(id);
     if (!fresh) return;
+    const freshAt = fresh.dates?.updatedAt || null;
+    if (freshAt === tp_lastRenderedAt) return; /* rien n'a changé */
     const df = Store._migrateDerog({ ...fresh });
     tp_journal = [...(df.actionLog || [])];
     renderTicketPage(df);
@@ -91,6 +96,7 @@ function _loadTicketById() {
    RENDER PRINCIPAL
 ================================================================ */
 function renderTicketPage(d) {
+  tp_lastRenderedAt = d.dates?.updatedAt || null;
   document.title = `${d.ticketId || '—'} — ${d.title || 'Sans titre'} — DerogManager`;
 
   renderTopbar(d);
@@ -160,8 +166,6 @@ function renderIdentityStrip(d) {
     <div class="tp-id-left">
       <div class="tp-id-badge-wrap">
         ${statusBadge(d.status)}
-        ${actionBadge(d.actionStatus)}
-        ${d.actionMotif && d.actionStatus === 'attente_demandeur' ? motifBadge(d) : ''}
         ${reviewDateTagHtml(d.actionLog)}
       </div>
       <div class="tp-id-sep"></div>

@@ -17,7 +17,7 @@
 .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-meta { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
 .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.card-action-status { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
+
 .card-expiry { font-size: 12px; font-weight: 500; }
 
 /* BADGES */
@@ -27,7 +27,7 @@
 .badge-validated { background: var(--status-validated-bg); color: var(--status-validated-text); border-color: var(--status-validated-border); }
 .badge-expired  { background: var(--status-expired-bg);   color: var(--status-expired-text);   border-color: var(--status-expired-border); }
 .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.badge-motif { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; white-space: nowrap; background: rgba(240,136,62,0.13); color: var(--action-attente-demandeur); border: 1px solid rgba(240,136,62,0.35); }
+
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
 .chip-danger { background: rgba(248,81,73,0.15); color: var(--status-rejected-text); }
 .chip-warn { background: rgba(240,136,62,0.15); color: var(--urgency-p1); }
@@ -43,20 +43,7 @@
 .dic-4 { background: rgba(248,81,73,0.15); color: var(--risk-4); }
 .dic-unknown { background: var(--bg-elevated); color: var(--text-muted); font-style: italic; }
 
-/* ACTION COLORS */
-.action-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.action-a_faire            { color: var(--action-a-faire); }
-.action-a_faire            .action-dot { background: var(--action-a-faire); }
-.action-attente_demandeur  { color: var(--action-attente-demandeur); }
-.action-attente_demandeur  .action-dot { background: var(--action-attente-demandeur); }
-.action-reunion_prevue     { color: var(--action-reunion-prevue); }
-.action-reunion_prevue     .action-dot { background: var(--action-reunion-prevue); }
-.action-suivi_date         { color: var(--action-suivi-date); }
-.action-suivi_date         .action-dot { background: var(--action-suivi-date); }
-.action-attente_validation { color: var(--action-attente-validation); }
-.action-attente_validation .action-dot { background: var(--action-attente-validation); }
-.action-termine            { color: var(--action-termine); }
-.action-termine            .action-dot { background: var(--action-termine); }
+
 .expiry-ok { color: var(--text-secondary); }
 .expiry-warn { color: var(--urgency-p1); font-weight: 600; }
 .expiry-danger { color: var(--urgency-p0); font-weight: 700; }

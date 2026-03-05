@@ -42,19 +42,7 @@ function dicHtml(dic) {
 function statusBadge(s) {
   return `<span class="badge badge-${s}"><span class="badge-dot"></span>${STATUS_LABELS[s]||s}</span>`;
 }
-function actionBadge(a) {
-  return `<span class="card-action-status action-${a}"><span class="action-dot"></span>${ACTION_SHORT[a]||ACTION_LABELS[a]||a}</span>`;
-}
 
-function motifBadge(d) {
-  if (d.actionStatus !== 'attente_demandeur' || !d.actionMotif) return '';
-  return `<span class="badge-motif">⏸ ${esc(d.actionMotif)}</span>`;
-}
-function motifCell(d) {
-  if (d.actionStatus !== 'attente_demandeur' || !d.actionMotif)
-    return '<span style="color:var(--text-muted)">—</span>';
-  return `<span class="badge-motif">⏸ ${esc(d.actionMotif)}</span>`;
-}
 function urgencyBadge(d) {
   const lvl = d.urgency?.level || (d.urgency?.p0Linked ? 'p0' : d.urgency?.p1Linked ? 'p1' : '-');
   if (lvl === 'p0') return '<span class="urgency-badge urgency-p0">P0</span>';

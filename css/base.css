@@ -24,12 +24,7 @@
   --status-rejected-bg: rgba(248,81,73,0.12);
   --status-rejected-text: #F85149;
   --status-rejected-border: rgba(248,81,73,0.3);
-  --action-a-faire:            #FF7B72;
-  --action-attente-demandeur:  #F0883E;
-  --action-reunion-prevue:     #BC8CFF;
-  --action-suivi-date:         #58A6FF;
-  --action-attente-validation: #E3B341;
-  --action-termine:            #3FB950;
+
   --urgency-p0: #FF7B72;
   --urgency-p1: #F0883E;
   --risk-1: #3FB950;
