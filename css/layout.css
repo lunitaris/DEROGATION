@@ -91,8 +91,3 @@
 .sidebar-section { display: flex; flex-direction: column; }
 .sidebar-divider { height: 1px; background: var(--border-muted); }
 
-/* SHORTCUTS BAR */
-.kbd-hint { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-mono); font-size: 10px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1px 5px; color: var(--text-muted); }
-.shortcuts-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 7px 20px; border-bottom: 1px solid var(--border-muted); background: var(--bg-elevated); font-size: 11px; color: var(--text-muted); position: fixed; top: var(--topbar-h); left: 0; right: 0; z-index: 95; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.shortcuts-bar.hidden { display: none; }
-body.shortcuts-open #app-body { padding-top: calc(var(--topbar-h) + 33px); }

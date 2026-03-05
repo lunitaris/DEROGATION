@@ -1003,6 +1003,95 @@ body {
 }
 
 /* ================================================================
+   DOSSIER IO — boutons Export/Import FR & EN
+================================================================ */
+.tp-dossier-io-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.tp-btn-dossier-io {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.tp-btn-dossier-io:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.tp-dossier-io-lang-sep {
+  font-size: 10px;
+  color: var(--border);
+  padding: 0 2px;
+  user-select: none;
+}
+
+/* ── MODAL DOSSIER ── */
+.tp-dossier-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tp-dossier-modal-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 640px;
+  max-width: 92vw;
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.45);
+}
+.tp-dossier-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-muted);
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.tp-dossier-modal-ta {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: none;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tp-dossier-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-muted);
+  flex-shrink: 0;
+}
+
+/* ================================================================
    MODALE EXPANSION — grande textarea centrée
 ================================================================ */
 .tp-expand-overlay {

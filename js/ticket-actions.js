@@ -626,6 +626,150 @@ function _tpSyncSoumissionFromCreated(date) {
 }
 
 /* ================================================================
+   DOSSIER — Export / Import FR & EN
+================================================================ */
+const _TP_DSEP = '═════════════════════════════════════════════';
+
+function _tpDossierFieldText(key) {
+  const el = document.getElementById('tp-nb-ta-' + key);
+  return el ? el.innerText.trim() : '';
+}
+
+function tpExportDossier(lang) {
+  const ctx = _tpDossierFieldText('contexte');
+  const rai = _tpDossierFieldText('raison');
+  const ris = _tpDossierFieldText('risques');
+  const pla = _tpDossierFieldText('plan');
+  const mit = _tpDossierFieldText('mitigations');
+  let text;
+  if (lang === 'FR') {
+    text =
+      `📌 Contexte\n${_TP_DSEP}\n${ctx}\n\nRAISON: ${rai}\n\n` +
+      `⚠️ Risque\n${_TP_DSEP}\n${ris}\n\n` +
+      `🛠️ Plan d'action\n${_TP_DSEP}\n${pla}\n\n\n` +
+      `📅 Planning\n${_TP_DSEP}\n\n\n\n` +
+      `🛡️ Mitigations\n${_TP_DSEP}\n${mit}\n\nP1/P0: \nBudget:`;
+  } else {
+    text =
+      `📌 Context\n${_TP_DSEP}\n${ctx}\n\nREASON: ${rai}\n\n` +
+      `⚠️ Risk\n${_TP_DSEP}\n${ris}\n\n` +
+      `🛠️ Action Plan\n${_TP_DSEP}\n${pla}\n\n\n` +
+      `📅 Timeline\n${_TP_DSEP}\n\n\n\n` +
+      `🛡️ Mitigations\n${_TP_DSEP}\n${mit}\n\nP1/P0: \nBudget:`;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => tpShowToast(`✓ Dossier ${lang} copié !`),
+      () => _tpShowDossierModal('export', lang, text)
+    );
+  } else {
+    _tpShowDossierModal('export', lang, text);
+  }
+}
+
+function tpOpenImportDossierModal(lang) {
+  _tpShowDossierModal('import', lang, '');
+}
+
+function _tpShowDossierModal(mode, lang, content) {
+  const overlay   = document.getElementById('tp-dossier-modal');
+  const ta        = document.getElementById('tp-dossier-modal-ta');
+  const title     = document.getElementById('tp-dossier-modal-title');
+  const importBtn = document.getElementById('tp-dossier-modal-import-btn');
+  if (!overlay || !ta) return;
+  overlay._mode = mode;
+  overlay._lang = lang;
+  if (mode === 'export') {
+    if (title) title.textContent = `Dossier ${lang} — Copiez ce texte`;
+    ta.value    = content;
+    ta.readOnly = true;
+    if (importBtn) importBtn.style.display = 'none';
+  } else {
+    if (title) title.textContent = lang === 'FR' ? 'Import Dossier FR' : 'Import Dossier EN';
+    ta.value    = '';
+    ta.readOnly = false;
+    ta.placeholder = lang === 'FR'
+      ? 'Collez ici le texte au format Dossier FR…'
+      : 'Paste here the text in EN Dossier format…';
+    if (importBtn) importBtn.style.display = '';
+  }
+  overlay.style.display = 'flex';
+  if (!ta.readOnly) setTimeout(() => ta.focus(), 40);
+}
+
+function tpCloseDossierModal() {
+  const overlay = document.getElementById('tp-dossier-modal');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function tpDoImportDossier() {
+  const overlay = document.getElementById('tp-dossier-modal');
+  const ta      = document.getElementById('tp-dossier-modal-ta');
+  if (!overlay || !ta || !tp_currentId) return;
+  const lang   = overlay._lang;
+  const parsed = _tpParseDossierText(ta.value, lang);
+  const fieldMap = [
+    { key: 'contexte',    label: lang === 'FR' ? 'Contexte'      : 'Context' },
+    { key: 'raison',      label: lang === 'FR' ? 'Raison'        : 'Reason' },
+    { key: 'risques',     label: lang === 'FR' ? 'Risque'        : 'Risk' },
+    { key: 'plan',        label: lang === 'FR' ? "Plan d'action" : 'Action Plan' },
+    { key: 'mitigations', label: 'Mitigations' },
+  ];
+  const d = Store.getById(tp_currentId);
+  if (!d) return;
+  const ns = { ...(d.notesStructured || {}) };
+  let anyApplied = false;
+  const preview = s => s.length > 100 ? s.substring(0, 100) + '…' : s;
+  for (const { key, label } of fieldMap) {
+    const newVal = parsed[key];
+    if (!newVal) continue;
+    const currentEl  = document.getElementById('tp-nb-ta-' + key);
+    const currentVal = currentEl ? currentEl.innerText.trim() : '';
+    if (currentVal && currentVal !== newVal) {
+      if (!confirm(`Remplacer "${label}" ?\n\nActuel :\n${preview(currentVal)}\n\nNouveau :\n${preview(newVal)}`)) continue;
+    }
+    if (currentEl) currentEl.innerHTML = plainToRichHtml(newVal);
+    ns[key] = plainToRichHtml(newVal);
+    anyApplied = true;
+  }
+  if (anyApplied) {
+    Store.updateNotesStructured(tp_currentId, ns);
+    tpUpdateDossierProgress();
+  }
+  tpCloseDossierModal();
+  if (anyApplied) tpShowToast(lang === 'FR' ? '✓ Dossier FR importé !' : '✓ Dossier EN imported!');
+  else tpShowToast('Aucun champ reconnu.');
+}
+
+function _tpParseDossierText(text, lang) {
+  const result = { contexte: null, raison: null, risques: null, plan: null, mitigations: null };
+  if (lang === 'FR') {
+    const ctxM = text.match(/📌 Contexte\s*\n[═]+\n([\s\S]*?)(?=\nRAISON:|⚠️|$)/);
+    if (ctxM) result.contexte = ctxM[1].trim();
+    const raiM = text.match(/RAISON:\s*([\s\S]*?)(?=\n⚠️|$)/);
+    if (raiM) result.raison = raiM[1].trim();
+    const risM = text.match(/⚠️ Risque\s*\n[═]+\n([\s\S]*?)(?=\n🛠️|$)/);
+    if (risM) result.risques = risM[1].trim();
+    const plaM = text.match(/🛠️ Plan d'action\s*\n[═]+\n([\s\S]*?)(?=\n📅|$)/);
+    if (plaM) result.plan = plaM[1].trim();
+    const mitM = text.match(/🛡️ Mitigations\s*\n[═]+\n([\s\S]*?)(?=\nP1\/P0:|\nBudget:|$)/);
+    if (mitM) result.mitigations = mitM[1].trim();
+  } else {
+    const ctxM = text.match(/📌 Context\s*\n[═]+\n([\s\S]*?)(?=\nREASON:|⚠️|$)/);
+    if (ctxM) result.contexte = ctxM[1].trim();
+    const raiM = text.match(/REASON:\s*([\s\S]*?)(?=\n⚠️|$)/);
+    if (raiM) result.raison = raiM[1].trim();
+    const risM = text.match(/⚠️ Risk\s*\n[═]+\n([\s\S]*?)(?=\n🛠️|$)/);
+    if (risM) result.risques = risM[1].trim();
+    const plaM = text.match(/🛠️ Action Plan\s*\n[═]+\n([\s\S]*?)(?=\n📅|$)/);
+    if (plaM) result.plan = plaM[1].trim();
+    const mitM = text.match(/🛡️ Mitigations\s*\n[═]+\n([\s\S]*?)(?=\nP1\/P0:|\nBudget:|$)/);
+    if (mitM) result.mitigations = mitM[1].trim();
+  }
+  return result;
+}
+
+/* ================================================================
    RESIZE DU CADRE SUPÉRIEUR (drag handle)
 ================================================================ */
 function tpInitSummaryResize() {

@@ -43,6 +43,14 @@
         Alerte expiration
       </button>
       <div class="tp-sep-v"></div>
+      <div class="tp-dossier-io-group">
+        <button class="tp-btn-dossier-io" onclick="tpExportDossier('FR')" title="Exporter le dossier en français dans le presse-papiers">ExportFR</button>
+        <button class="tp-btn-dossier-io" onclick="tpOpenImportDossierModal('FR')" title="Importer un dossier depuis du texte français">ImportFR</button>
+        <span class="tp-dossier-io-lang-sep">|</span>
+        <button class="tp-btn-dossier-io" onclick="tpExportDossier('EN')" title="Export dossier to clipboard in English">ExportEN</button>
+        <button class="tp-btn-dossier-io" onclick="tpOpenImportDossierModal('EN')" title="Import dossier from English text">ImportEN</button>
+      </div>
+      <div class="tp-sep-v"></div>
       <button class="tp-btn-icon" onclick="tpOpenEdit()" title="Modifier la dérogation">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
@@ -146,5 +154,22 @@
 
   <!-- Tooltip timeline (positionné fixe par CSS) -->
   <div id="tp-tooltip" class="tp-tooltip"></div>
+
+  <!-- MODAL DOSSIER EXPORT / IMPORT -->
+  <div id="tp-dossier-modal" class="tp-dossier-modal-overlay" onclick="if(event.target===this)tpCloseDossierModal()" style="display:none">
+    <div class="tp-dossier-modal-box">
+      <div class="tp-dossier-modal-header">
+        <span id="tp-dossier-modal-title"></span>
+        <button class="tp-expand-close" onclick="tpCloseDossierModal()" title="Fermer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <textarea id="tp-dossier-modal-ta" class="tp-dossier-modal-ta" placeholder="…"></textarea>
+      <div class="tp-dossier-modal-footer">
+        <button class="btn-cancel" onclick="tpCloseDossierModal()">Fermer</button>
+        <button id="tp-dossier-modal-import-btn" class="btn-save" onclick="tpDoImportDossier()">Importer</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

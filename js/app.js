@@ -13,11 +13,6 @@ function openFullscreen(id) {
   window.open('ticket.html?id=' + id, '_blank');
 }
 
-function toggleShortcutsBar() {
-  const bar = document.getElementById('shortcuts-bar');
-  const hidden = bar.classList.toggle('hidden');
-  document.body.classList.toggle('shortcuts-open', !hidden);
-}
 
 function exportData() {
   const blob = new Blob([Store.exportClear()],{type:'application/json'});
@@ -74,15 +69,6 @@ function importData(input) {
   reader.readAsText(file);
 }
 
-/* KEYBOARD */
-document.addEventListener('keydown', e => {
-  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-  if (e.key==='Escape') { closeSidebar(); closeModal('derog-modal'); closeModal('email-modal'); closeModal('confirm-modal'); }
-  if (e.key==='n'||e.key==='N') openNewModal();
-  if (e.key==='/') { e.preventDefault(); document.getElementById('search-input').focus(); }
-  if (e.key==='j'||e.key==='ArrowDown') navigateSidebar(1);
-  if (e.key==='k'||e.key==='ArrowUp') navigateSidebar(-1);
-});
 
 document.getElementById('search-input').addEventListener('input', e => {
   filters.search = e.target.value;
